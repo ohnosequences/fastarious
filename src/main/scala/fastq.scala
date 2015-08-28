@@ -22,10 +22,7 @@ case object fastq {
     implicit def fastqOps(fq: FASTQ.type := FASTQ.Raw): FASTQOps = FASTQOps(fq.value)
   }
 
-
-
   implicit lazy val idSerializer    = PropertySerializer(id, id.label){ v => Some(s"${id.start}${v}") }
-  implicit lazy val plusSerializer  = PropertySerializer(plus, plus.label){ v => Some("+") }
 
   case class FASTQOps(val seq: FASTQ.Raw) extends AnyVal {
 
