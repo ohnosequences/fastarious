@@ -5,12 +5,11 @@ import fasta._
 
 case object fastq {
 
-  case object +
   // id should not include the '@' char
-  case object id        extends Property[String]("fastq.id") { val start = "@" }
-  case object sequence  extends Property[String]("fastq.sequence")
-  case object plus      extends Property[String]("fastq.plus")
-  case object quality   extends Property[String]("fastq.quality")
+  case object id        extends Property[String]("id") { val start = "@" }
+  case object sequence  extends Property[String]("sequence")
+  case object plus      extends Property[String]("plus") { val start = "+" }
+  case object quality   extends Property[String]("quality")
 
   case object FASTQ extends Record(
     id        :&:
@@ -22,7 +21,14 @@ case object fastq {
     implicit def fastqOps(fq: FASTQ.type := FASTQ.Raw): FASTQOps = FASTQOps(fq.value)
   }
 
-  implicit lazy val idSerializer    = PropertySerializer(id, id.label){ v => Some(s"${id.start}${v}") }
+  implicit lazy val idSerializer = PropertySerializer(id, id.label){ v => Some(s"${id.start}${v}") }
+  // checks the first char
+  implicit lazy val idParser = PropertyParser(id, id.label){
+    v: String => if (v startsWith id.start) Some(v.drop(1)) else None
+  }
+  implicit lazy val plusParser = PropertyParser(plus, plus.label){
+    v: String => if (v startsWith plus.start) Some(v.drop(1)) else None
+  }
 
   case class FASTQOps(val seq: FASTQ.Raw) extends AnyVal {
 
