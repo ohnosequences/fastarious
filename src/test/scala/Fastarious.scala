@@ -11,7 +11,7 @@ class FastariousTest extends FunSuite {
 
     val v = FASTQ(
       fastq.id("adsfadfad") :~:
-      fastq.sequence("ATGATAGAGATAGATGATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT") :~:
+      fastq.sequence("ATGATAGAGATAGATGATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTATCTCTTTTCCAGAGTGGGGGTATGGATGGGTATAAAAAAGGGGGTAGGGATGAGATAAAATGGGTGAACCCTACCCTACTCTCTTTTTTTTTTTTTTTTTTTTTTTT") :~:
       fastq.plus("+")   :~:
       fastq.quality("aq23#@!$!DAF$A%Q#$!ASVCSGH^@#$#@!$~@@E @Q#$Q#$Q") :~: ∅
     )
@@ -20,8 +20,8 @@ class FastariousTest extends FunSuite {
 
     println( (zzz get fasta.sequence).value.lines.toString )
 
-    println( zzz.serialize[String] )
-
     println( v.toLines.mkString("\n") )
+
+    println(zzz.toLines.mkString("\n"))
   }
 }
