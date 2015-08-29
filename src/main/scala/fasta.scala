@@ -4,7 +4,8 @@ import ohnosequences.cosas._, types._, properties._, records._
 
 case object fasta {
 
-  case object header    extends Property[String]("header") { val start = ">" }
+  /* values of this property correspond to the header */
+  case object header    extends Property[FastaHeader]("header") { val start = ">" }
   case object sequence  extends Property[FastaLines]("sequence")
 
   type FASTA = FASTA.type
@@ -16,26 +17,47 @@ case object fasta {
     implicit def fastaOps(fa: FASTA.type := FASTA.Raw): FASTAOps = new FASTAOps(fa.value)
   }
 
-  implicit lazy val serializeHeader =
-    PropertySerializer(header, header.label){ v: String => Some(s"${header.start}${v}") }
+  implicit lazy val headerSerializer =
+    PropertySerializer(header, header.label){ h: FastaHeader => Some(h.asString) }
   implicit lazy val headerParser =
-    PropertyParser(header, header.label){ v: String => if (v startsWith header.start) Some(v.drop(1)) else None }
+    PropertyParser(header, header.label){ v: String => Some(FastaHeader(v)) }
 
+  implicit lazy val sequenceSerializer =
+    PropertySerializer(sequence, sequence.label){ fl: FastaLines => Some(fl.asString) }
   implicit lazy val sequenceParser =
     PropertyParser(sequence, sequence.label){ v: String => Some(FastaLines(v)) }
 
+  case object FastaHeader {
+
+    def apply(h: String): FastaHeader =
+      if(h startsWith header.start) new FastaHeader(h drop 1) else new FastaHeader(h)
+  }
+
+  final class FastaHeader private[fastarious](val value: String) extends AnyVal {
+
+    def asString: String = s"${header.start}${value}"
+  }
+
   case object FastaLines {
 
+    private def clean(s: String): String =
+      (s split('\n') map { _.trim.filter(_ >= ' ') } mkString)
+
     def apply(ll: Seq[String]): FastaLines =
-      new FastaLines( ll map { _.filterNot(c => c == '\n') } flatMap { _.grouped(70) } )
+      new FastaLines( (ll map clean) flatMap { _.grouped(70) } )
 
     def apply(l: String): FastaLines =
-      new FastaLines( l.filterNot(c => c == '\n').grouped(70).toSeq )
+      new FastaLines( clean(l).grouped(70).toList )
   }
 
   final class FastaLines private(val lines: Seq[String]) extends AnyVal {
 
-    def ++(other: FastaLines): FastaLines = FastaLines(lines ++ other.lines)
+    // this potentially creates funny albeit correct line length at the joining lining
+    def ++(other: FastaLines): FastaLines =
+      FastaLines(lines ++ other.lines)
+
+    def asString: String =
+      lines.mkString
   }
 
   final class FASTAOps(val fa: FASTA.Raw) extends AnyVal {
