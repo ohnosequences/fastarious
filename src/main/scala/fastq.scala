@@ -26,6 +26,8 @@ case object fastq {
   implicit lazy val idParser =
     PropertyParser(id, id.label){ v: String => Some(FastqId(v)) }
 
+  implicit lazy val plusSerializer =
+    PropertySerializer(plus, plus.label){ v => Some(v asString) }
   implicit lazy val plusParser =
     PropertyParser(plus, plus.label){ v: String => Some(FastqPlus(v)) }
 
@@ -53,7 +55,10 @@ case object fastq {
     def apply(s: String): FastqSequence =
       new FastqSequence( utils.removeAllSpace(s) )
   }
-  final class FastqSequence private (val value: String) extends AnyVal
+  final class FastqSequence private (val value: String) extends AnyVal {
+
+    def asString = value
+  }
 
   case object FastqPlus {
 
@@ -67,11 +72,8 @@ case object fastq {
   // the value here is assumed (and guaranteed) to be '@'-free
   final class FastqPlus private[fastarious](val value: String) extends AnyVal {
 
-    def toFastaHeader: FastaHeader =
-      new FastaHeader(value)
-
     def asString: String =
-      s"${id.start}${value}"
+      s"${plus.start}${value}"
   }
 
   case object FastqQuality {
@@ -79,26 +81,28 @@ case object fastq {
     def apply(s: String): FastqQuality =
       new FastqQuality( utils.removeAllSpace(s) )
   }
-  final class FastqQuality private (val value: String) extends AnyVal
+  final class FastqQuality private (val value: String) extends AnyVal {
 
-
+    def asString = value
+  }
 
   case class FASTQOps(val seq: FASTQ.Raw) extends AnyVal {
 
-    @inline private def me: ValueOf[FASTQ.type] = FASTQ(seq)
+    @inline private def me: ValueOf[FASTQ.type] =
+      FASTQ(seq)
 
     def toFASTA: ValueOf[FASTA] =
       FASTA(
-        fasta.header( me.get(id).value toFastaHeader )                             :~:
-        fasta.sequence( FastaLines((me get sequence).value.value) )  :~: ∅
+        fasta.header( me.getV(id) toFastaHeader )                  :~:
+        fasta.sequence( FastaLines((me getV sequence).asString) )  :~: ∅
       )
 
     def toLines: Seq[String] =
       Seq(
-        (me get id value).asString,
-        (me get sequence value).value,
-        (me get plus value).asString,
-        (me get quality value).value
+        (me getV id)       .asString,
+        (me getV sequence) .asString,
+        (me getV plus)     .asString,
+        (me getV quality)  .asString
       )
   }
 }
