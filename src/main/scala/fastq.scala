@@ -8,7 +8,7 @@ case object fastq {
   // id should not include the '@' char
   case object id        extends Property[FastqId]("id") { val start = "@" }
   case object sequence  extends Property[FastqSequence]("sequence")
-  case object plus      extends Property[String]("plus") { val start = "+" }
+  case object plus      extends Property[FastqPlus]("plus") { val start = "+" }
   case object quality   extends Property[FastqQuality]("quality")
 
   case object FASTQ extends Record(
@@ -26,14 +26,17 @@ case object fastq {
   implicit lazy val idParser =
     PropertyParser(id, id.label){ v: String => Some(FastqId(v)) }
 
-  implicit lazy val plusParser = PropertyParser(plus, plus.label){
-    v: String => if (v startsWith plus.start) Some(v.drop(1)) else None
-  }
+  implicit lazy val plusParser =
+    PropertyParser(plus, plus.label){ v: String => Some(FastqPlus(v)) }
 
   case object FastqId {
 
-    def apply(i: String): FastqId =
-      if(i startsWith id.start) new FastqId(i drop 1) else new FastqId(i)
+    def apply(i: String): FastqId = {
+
+      // just *one* line
+      val l = i.filterNot(_ == '\n')
+      if(l startsWith id.start) new FastqId(l drop 1) else new FastqId(l)
+    }
   }
   // the value here is assumed (and guaranteed) to be '@'-free
   final class FastqId private[fastarious](val value: String) extends AnyVal {
@@ -52,12 +55,33 @@ case object fastq {
   }
   final class FastqSequence private (val value: String) extends AnyVal
 
+  case object FastqPlus {
+
+    def apply(i: String): FastqPlus = {
+
+      // just *one* line
+      val l = i.filterNot(_ == '\n')
+      if(l startsWith plus.start) new FastqPlus(l drop 1) else new FastqPlus(l)
+    }
+  }
+  // the value here is assumed (and guaranteed) to be '@'-free
+  final class FastqPlus private[fastarious](val value: String) extends AnyVal {
+
+    def toFastaHeader: FastaHeader =
+      new FastaHeader(value)
+
+    def asString: String =
+      s"${id.start}${value}"
+  }
+
   case object FastqQuality {
 
     def apply(s: String): FastqQuality =
       new FastqQuality( utils.removeAllSpace(s) )
   }
   final class FastqQuality private (val value: String) extends AnyVal
+
+
 
   case class FASTQOps(val seq: FASTQ.Raw) extends AnyVal {
 
@@ -71,11 +95,10 @@ case object fastq {
 
     def toLines: Seq[String] =
       Seq(
-        s"${id.start}${me get id value}",
+        (me get id value).asString,
         (me get sequence value).value,
-        me get plus value,
+        (me get plus value).asString,
         (me get quality value).value
       )
-
   }
 }

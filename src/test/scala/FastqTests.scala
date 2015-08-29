@@ -17,7 +17,7 @@ class FastqTests extends FunSuite {
     val fq = FASTQ(
       id(FastqId(i))                :~:
       sequence(FastqSequence(seq))  :~:
-      plus(p)                       :~:
+      plus(FastqPlus(p))            :~:
       quality(FastqQuality(qual))   :~: ∅
     )
   }
