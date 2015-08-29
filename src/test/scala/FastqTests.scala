@@ -15,10 +15,10 @@ class FastqTests extends FunSuite {
     val qual = "#$adF!#$DAFAFa5++0-afd324safd"
 
     val fq = FASTQ(
-      id(FastqId(i))  :~:
-      sequence(seq)   :~:
-      plus(p)         :~:
-      quality(qual)   :~: ∅
+      id(FastqId(i))                :~:
+      sequence(FastqSequence(seq))  :~:
+      plus(p)                       :~:
+      quality(FastqQuality(qual))   :~: ∅
     )
   }
 }

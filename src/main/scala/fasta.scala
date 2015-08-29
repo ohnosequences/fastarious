@@ -40,14 +40,11 @@ case object fasta {
 
   case object FastaLines {
 
-    private def clean(s: String): String =
-      (s split('\n') map { _.trim.filter(_ >= ' ') } mkString)
-
     def apply(ll: Seq[String]): FastaLines =
-      new FastaLines( (ll map clean) flatMap { _.grouped(70) } )
+      new FastaLines( (ll map utils.removeAllSpace) flatMap { _.grouped(70) } )
 
     def apply(l: String): FastaLines =
-      new FastaLines( clean(l).grouped(70).toList )
+      new FastaLines( utils.removeAllSpace(l).grouped(70).toList )
   }
 
   final class FastaLines private(val lines: Seq[String]) extends AnyVal {

@@ -7,9 +7,9 @@ case object fastq {
 
   // id should not include the '@' char
   case object id        extends Property[FastqId]("id") { val start = "@" }
-  case object sequence  extends Property[String]("sequence")
+  case object sequence  extends Property[FastqSequence]("sequence")
   case object plus      extends Property[String]("plus") { val start = "+" }
-  case object quality   extends Property[String]("quality")
+  case object quality   extends Property[FastqQuality]("quality")
 
   case object FASTQ extends Record(
     id        :&:
@@ -45,6 +45,20 @@ case object fastq {
       s"${id.start}${value}"
   }
 
+  case object FastqSequence {
+
+    def apply(s: String): FastqSequence =
+      new FastqSequence( utils.removeAllSpace(s) )
+  }
+  final class FastqSequence private (val value: String) extends AnyVal
+
+  case object FastqQuality {
+
+    def apply(s: String): FastqQuality =
+      new FastqQuality( utils.removeAllSpace(s) )
+  }
+  final class FastqQuality private (val value: String) extends AnyVal
+
   case class FASTQOps(val seq: FASTQ.Raw) extends AnyVal {
 
     @inline private def me: ValueOf[FASTQ.type] = FASTQ(seq)
@@ -52,15 +66,15 @@ case object fastq {
     def toFASTA: ValueOf[FASTA] =
       FASTA(
         fasta.header( me.get(id).value toFastaHeader )                             :~:
-        fasta.sequence( FastaLines(Seq( (me get sequence).value )) )  :~: ∅
+        fasta.sequence( FastaLines((me get sequence).value.value) )  :~: ∅
       )
 
     def toLines: Seq[String] =
       Seq(
         s"${id.start}${me get id value}",
-        me get sequence value,
+        (me get sequence value).value,
         me get plus value,
-        me get quality value
+        (me get quality value).value
       )
 
   }
