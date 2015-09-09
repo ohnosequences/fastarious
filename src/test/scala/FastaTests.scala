@@ -39,7 +39,17 @@ class FastaTests extends FunSuite {
 
   test("line length is always 70") {
 
-    // TODO
+    val h = ">@HUGHA5.ADFDA#"
+    val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
+
+    val f = FASTA(
+      header(FastaHeader(h))    :~:
+      sequence(FastaLines(seq)) :~: ∅
+    )
+
+    val ls = f.toLines
+
+    assert { ls.filter(l => (l.length <= 70) || l.startsWith(">")) === ls }
   }
 
   test("reasonable header behavior") {
