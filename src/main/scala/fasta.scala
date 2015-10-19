@@ -62,7 +62,8 @@ case object fasta {
     @inline private def me: ValueOf[FASTA.type] = FASTA(fa)
 
     def toLines: Seq[String] =
-      Seq(s"${header.start}${me get header value}") ++ ((me get sequence value) lines)
+      // header value
+      Seq(s"${header.start}${me.getV(header).value}") ++ me.getV(sequence).lines
   }
 
 }
