@@ -37,12 +37,12 @@ class FastaTests extends FunSuite {
     }
   }
 
-  test("line length is always 70") {
+  ignore("line length is always 70") {
 
     // TODO
   }
 
-  test("reasonable header behavior") {
+  ignore("reasonable header behavior") {
 
     // TODO
   }
