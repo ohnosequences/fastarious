@@ -2,7 +2,7 @@ package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
 
-import ohnosequences.cosas._, types._, typeSets._
+import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fasta._
 
 class FastaTests extends FunSuite {
@@ -10,8 +10,8 @@ class FastaTests extends FunSuite {
   test("can create FASTA values") {
 
     val f = FASTA(
-      header(FastaHeader(">@HUGHA5.ADFDA#")) :~:
-      sequence(FastaLines("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATC")) :~: ∅
+      header(FastaHeader(">@HUGHA5.ADFDA#")) ::
+      sequence(FastaLines("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATC")) :: *[AnyDenotation]
     )
   }
 
@@ -28,8 +28,8 @@ class FastaTests extends FunSuite {
     """
 
     val f = FASTA(
-      header(FastaHeader(h))    :~:
-      sequence(FastaLines(seq)) :~: ∅
+      header(FastaHeader(h))    ::
+      sequence(FastaLines(seq)) :: *[AnyDenotation]
     )
 
     assert {
@@ -43,8 +43,8 @@ class FastaTests extends FunSuite {
     val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
 
     val f = FASTA(
-      header(FastaHeader(h))    :~:
-      sequence(FastaLines(seq)) :~: ∅
+      header(FastaHeader(h))    ::
+      sequence(FastaLines(seq)) :: *[AnyDenotation]
     )
 
     val ls = f.toLines

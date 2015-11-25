@@ -1,31 +1,31 @@
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._, records._
+import ohnosequences.cosas._, types._, records._, fns._, klists._
 
 case object fasta {
 
   /* values of this property correspond to the header */
-  case object header    extends Property[FastaHeader]("header") { val start = ">" }
-  case object sequence  extends Property[FastaLines]("sequence")
+  case object header    extends Type[FastaHeader]("header") { val start = ">" }
+  case object sequence  extends Type[FastaLines]("sequence")
 
   type FASTA = FASTA.type
-  case object FASTA extends Record(
-    header    :&:
-    sequence  :&: □
+  case object FASTA extends RecordType(
+    header    :×:
+    sequence  :×: |[AnyType]
   )
   {
-    implicit def fastaOps(fa: FASTA.type := FASTA.Raw): FASTAOps = new FASTAOps(fa.value)
+    implicit def fastaOps[RV <: FASTA.Raw](fa: FASTA := RV): FASTAOps[RV] = new FASTAOps[RV](fa.value)
   }
 
   implicit lazy val headerSerializer =
-    PropertySerializer(header, header.label){ h: FastaHeader => Some(h.asString) }
+    new DenotationSerializer(header, header.label)({ h: FastaHeader => Some(h.asString) })
   implicit lazy val headerParser =
-    PropertyParser(header, header.label){ v: String => Some(FastaHeader(v)) }
+    new DenotationParser(header, header.label)({ v: String => Some(FastaHeader(v)) })
 
   implicit lazy val sequenceSerializer =
-    PropertySerializer(sequence, sequence.label){ fl: FastaLines => Some(fl.asString) }
+    new DenotationSerializer(sequence, sequence.label)({ fl: FastaLines => Some(fl.asString) })
   implicit lazy val sequenceParser =
-    PropertyParser(sequence, sequence.label){ v: String => Some(FastaLines(v)) }
+    new DenotationParser(sequence, sequence.label)({ v: String => Some(FastaLines(v)) })
 
   case object FastaHeader {
 
@@ -57,11 +57,14 @@ case object fasta {
       lines.mkString
   }
 
-  final class FASTAOps(val fa: FASTA.Raw) extends AnyVal {
+  final class FASTAOps[RV <: FASTA.Raw](val fa: RV) extends AnyVal {
 
-    @inline private def me: ValueOf[FASTA.type] = FASTA(fa)
+    @inline private def me: FASTA := RV = FASTA(fa)
 
-    def toLines: Seq[String] =
+    def toLines(implicit
+      getH: AnyApp1At[FindS[AnyDenotationOf[header.type]],RV] { type Y = header.type := header.Raw },
+      getS: AnyApp1At[FindS[AnyDenotationOf[sequence.type]],RV] { type Y = sequence.type := sequence.Raw }
+    ): Seq[String] =
       // header value
       Seq(s"${header.start}${me.getV(header).value}") ++ me.getV(sequence).lines
   }
