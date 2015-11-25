@@ -1,6 +1,6 @@
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._, properties._, records._
+import ohnosequences.cosas._, types._, records._
 
 case object fasta {
 
