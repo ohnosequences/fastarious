@@ -62,9 +62,10 @@ case object fasta {
     @inline private def me: FASTA := RV = FASTA(fa)
 
     def toLines(implicit
-      getH: AnyApp1At[FindS[AnyDenotationOf[header.type]],RV] { type Y = header.type := header.Raw },
-      getS: AnyApp1At[FindS[AnyDenotationOf[sequence.type]],RV] { type Y = sequence.type := sequence.Raw }
-    ): Seq[String] =
+      getH: AnyApp1At[findS[AnyDenotation { type Tpe = header.type }],RV] { type Y = header.type := header.Raw },
+      getS: AnyApp1At[findS[AnyDenotation { type Tpe = sequence.type }],RV] { type Y = sequence.type := sequence.Raw }
+    )
+    : Seq[String] =
       // header value
       Seq(s"${header.start}${me.getV(header).value}") ++ me.getV(sequence).lines
   }

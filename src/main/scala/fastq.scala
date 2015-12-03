@@ -93,8 +93,8 @@ case object fastq {
       FASTQ(seq)
 
     def toFASTA(implicit
-      getId: AnyApp1At[FindS[AnyDenotationOf[id.type]], RV] { type Y = id.type := id.Raw },
-      getSeq: AnyApp1At[FindS[AnyDenotationOf[sequence.type]], RV] { type Y = sequence.type := sequence.Raw }
+      getId: AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
+      getSeq: AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw }
     )
     : FASTA := ((fasta.header.type := fasta.header.Raw) :: (fasta.sequence.type := fasta.sequence.Raw) :: *[AnyDenotation]) =
       FASTA(
@@ -103,10 +103,10 @@ case object fastq {
       )
 
     def toLines(implicit
-      getId: AnyApp1At[FindS[AnyDenotationOf[id.type]], RV] { type Y = id.type := id.Raw },
-      getSeq: AnyApp1At[FindS[AnyDenotationOf[sequence.type]], RV] { type Y = sequence.type := sequence.Raw },
-      getPlus: AnyApp1At[FindS[AnyDenotationOf[plus.type]],RV] { type Y = plus.type := plus.Raw },
-      getQual: AnyApp1At[FindS[AnyDenotationOf[quality.type]],RV] { type Y = quality.type := quality.Raw }
+      getId: AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
+      getSeq: AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw },
+      getPlus: AnyApp1At[findS[AnyDenotation.Of[plus.type]],RV] { type Y = plus.type := plus.Raw },
+      getQual: AnyApp1At[findS[AnyDenotation.Of[quality.type]],RV] { type Y = quality.type := quality.Raw }
     )
     : Seq[String] =
       Seq(
