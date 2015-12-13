@@ -1,0 +1,1 @@
+This is a release based on the stable version cosas (0.7.1), before breaking changes.
