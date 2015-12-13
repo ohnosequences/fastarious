@@ -4,7 +4,7 @@ package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
 
-import ohnosequences.cosas._, types._, typeSets._
+import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fastq._
 
 class FastqTests extends FunSuite {
@@ -17,10 +17,10 @@ class FastqTests extends FunSuite {
     val qual = "#$adF!#$DAFAFa5++0-afd324safd"
 
     val fq = FASTQ(
-      id(FastqId(i))                :~:
-      sequence(FastqSequence(seq))  :~:
-      plus(FastqPlus(p))            :~:
-      quality(FastqQuality(qual))   :~: ∅
+      id(FastqId(i))                ::
+      sequence(FastqSequence(seq))  ::
+      plus(FastqPlus(p))            ::
+      quality(FastqQuality(qual))   :: *[AnyDenotation]
     )
   }
 }
@@ -30,8 +30,8 @@ class FastqTests extends FunSuite {
 
 
 
+[test/scala/FastqTests.scala]: FastqTests.scala.md
+[test/scala/FastaTests.scala]: FastaTests.scala.md
 [main/scala/fasta.scala]: ../../main/scala/fasta.scala.md
 [main/scala/fastq.scala]: ../../main/scala/fastq.scala.md
 [main/scala/utils.scala]: ../../main/scala/utils.scala.md
-[test/scala/FastaTests.scala]: FastaTests.scala.md
-[test/scala/FastqTests.scala]: FastqTests.scala.md

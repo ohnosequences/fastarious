@@ -2,36 +2,37 @@
 ```scala
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._, typeSets._, properties._, records._
+import ohnosequences.cosas._, types._, records._, fns._, klists._
 import fasta._
 
 case object fastq {
 
   // id should not include the '@' char
-  case object id        extends Property[FastqId]("id") { val start = "@" }
-  case object sequence  extends Property[FastqSequence]("sequence")
-  case object plus      extends Property[FastqPlus]("plus") { val start = "+" }
-  case object quality   extends Property[FastqQuality]("quality")
+  case object id        extends Type[FastqId]("id") { val start = "@" }
+  case object sequence  extends Type[FastqSequence]("sequence")
+  case object plus      extends Type[FastqPlus]("plus") { val start = "+" }
+  case object quality   extends Type[FastqQuality]("quality")
 
-  case object FASTQ extends Record(
-    id        :&:
-    sequence  :&:
-    plus      :&:
-    quality   :&: □
+  type FASTQ = FASTQ.type
+  case object FASTQ extends RecordType(
+    id        :×:
+    sequence  :×:
+    plus      :×:
+    quality   :×: |[AnyType]
   )
   {
-    implicit def fastqOps(fq: FASTQ.type := FASTQ.Raw): FASTQOps = FASTQOps(fq.value)
+    implicit def fastqOps[RV <: FASTQ.Raw](fq: FASTQ.type := RV): FASTQOps[RV] = FASTQOps(fq.value)
   }
 
   implicit lazy val idSerializer =
-    PropertySerializer(id, id.label){ v => Some(v asString) }
+    new DenotationSerializer(id, id.label)({ v: FastqId => Some(v asString) })
   implicit lazy val idParser =
-    PropertyParser(id, id.label){ v: String => Some(FastqId(v)) }
+    new DenotationParser(id, id.label)({ v: String => Some(FastqId(v)) })
 
   implicit lazy val plusSerializer =
-    PropertySerializer(plus, plus.label){ v => Some(v asString) }
+    new DenotationSerializer(plus, plus.label)({ v: FastqPlus => Some(v asString) })
   implicit lazy val plusParser =
-    PropertyParser(plus, plus.label){ v: String => Some(FastqPlus(v)) }
+    new DenotationParser(plus, plus.label)({ v: String => Some(FastqPlus(v)) })
 
   case object FastqId {
 
@@ -88,18 +89,28 @@ case object fastq {
     def asString = value
   }
 
-  case class FASTQOps(val seq: FASTQ.Raw) extends AnyVal {
+  case class FASTQOps[RV <: FASTQ.Raw](val seq: RV) extends AnyVal {
 
-    @inline private def me: ValueOf[FASTQ.type] =
+    @inline private def me: FASTQ := RV =
       FASTQ(seq)
 
-    def toFASTA: ValueOf[FASTA] =
+    def toFASTA(implicit
+      getId: AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
+      getSeq: AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw }
+    )
+    : FASTA := ((fasta.header.type := fasta.header.Raw) :: (fasta.sequence.type := fasta.sequence.Raw) :: *[AnyDenotation]) =
       FASTA(
-        fasta.header( me.getV(id) toFastaHeader )                  :~:
-        fasta.sequence( FastaLines((me getV sequence).asString) )  :~: ∅
+        fasta.header( me.getV(id) toFastaHeader )                  ::
+        fasta.sequence( FastaLines((me getV sequence).asString) )  :: *[AnyDenotation]
       )
 
-    def toLines: Seq[String] =
+    def toLines(implicit
+      getId: AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
+      getSeq: AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw },
+      getPlus: AnyApp1At[findS[AnyDenotation.Of[plus.type]],RV] { type Y = plus.type := plus.Raw },
+      getQual: AnyApp1At[findS[AnyDenotation.Of[quality.type]],RV] { type Y = quality.type := quality.Raw }
+    )
+    : Seq[String] =
       Seq(
         (me getV id)       .asString,
         (me getV sequence) .asString,
@@ -114,8 +125,8 @@ case object fastq {
 
 
 
+[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
+[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
 [main/scala/utils.scala]: utils.scala.md
-[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
-[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
