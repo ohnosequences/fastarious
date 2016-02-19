@@ -1,3 +1,5 @@
+
+```scala
 package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
@@ -19,28 +21,17 @@ class NcbiHeadersTests extends FunSuite {
     println { randomIds.asFastaHeader.value.asString }
     println { randomIds.asFastqId.value.asString }
   }
-
-  test("ncbi ids example use") {
-
-    // use the ids before and the sequence, Note the ugly seq etc
-    val seq = """
-    ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATC
-    ATCCACGA
-    TTTCACAACAGTGTCAACTGACCCCCCCCCCCCCCCCCCCCCCCCCCC
-    CCCTACATATAATATATATATACCCGA
-    CCCCCTTCTACACTCCCCCCCCCCCACATGGTCATAC
-    ACACACCCCCCCCCCCCCC
-    AACT
-    ACACACCCCCCCC
-    TTTTCTCTCCCCCTTTTTTTT
-    """
-
-    val fa = FASTA(
-      randomIds.asFastaHeader   ::
-      sequence(FastaLines(seq)) ::
-      *[AnyDenotation]
-    )
-
-    println { fa.toLines }    
-  }
 }
+
+```
+
+
+
+
+[test/scala/NcbiHeadersTests.scala]: NcbiHeadersTests.scala.md
+[test/scala/FastqTests.scala]: FastqTests.scala.md
+[test/scala/FastaTests.scala]: FastaTests.scala.md
+[main/scala/fasta.scala]: ../../main/scala/fasta.scala.md
+[main/scala/fastq.scala]: ../../main/scala/fastq.scala.md
+[main/scala/utils.scala]: ../../main/scala/utils.scala.md
+[main/scala/ncbiHeaders.scala]: ../../main/scala/ncbiHeaders.scala.md
