@@ -7,7 +7,7 @@ import ohnosequences.fastarious._, fasta._, ncbiHeaders._
 
 class NcbiHeadersTests extends FunSuite {
 
-  val ramdonIds = ncbiHeader(
+  val randomIds = ncbiHeader(
     gb(accession("A3CFTC4.4", "X4CC8HG"))           ::
     gi(21312324)                                    ::
     name("A really interesting sequence hola hola") ::
@@ -16,6 +16,7 @@ class NcbiHeadersTests extends FunSuite {
 
   test("can construct a header string from an ncbi record value") {
 
-    println { ramdonIds.asFastaHeader.value.asString }
+    println { randomIds.asFastaHeader.value.asString }
+    println { randomIds.asFastqId.value.asString }
   }
 }
