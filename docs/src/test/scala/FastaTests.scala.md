@@ -65,8 +65,10 @@ class FastaTests extends FunSuite {
 
 
 
+[test/scala/NcbiHeadersTests.scala]: NcbiHeadersTests.scala.md
 [test/scala/FastqTests.scala]: FastqTests.scala.md
 [test/scala/FastaTests.scala]: FastaTests.scala.md
 [main/scala/fasta.scala]: ../../main/scala/fasta.scala.md
 [main/scala/fastq.scala]: ../../main/scala/fastq.scala.md
 [main/scala/utils.scala]: ../../main/scala/utils.scala.md
+[main/scala/ncbiHeaders.scala]: ../../main/scala/ncbiHeaders.scala.md

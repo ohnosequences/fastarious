@@ -2,12 +2,23 @@ package ohnosequences.fastarious
 
 import ohnosequences.cosas._, types._, records._, fns._, klists._
 
+/*
+  ## NCBI sequence IDs
+
+  See these for a reference:
+
+  - https://en.wikipedia.org/wiki/FASTA_format#Sequence_identifiers
+  - https://www.ncbi.nlm.nih.gov/toolkit/doc/book/ch_demo/?rendertype=table#ch_demo.T5
+  - https://www.ncbi.nlm.nih.gov/genbank/sequenceids/
+  - https://ncbi.github.io/cxx-toolkit/pages/ch_demo#ch_demo.id1_fetch.html_ref_fasta
+*/
 case object ncbiHeaders {
 
   trait NcbiID extends AnyType
-  // TODO all instances here
+  // TODO add the rest of ids here
   case object gi    extends Type[Int]("gi") with NcbiID
   case object gb    extends Type[accession]("gb") with NcbiID
+  /* this field corresponds to the name that is normally at the end, with spaces and all that */
   case object name  extends Type[String]("") with NcbiID
 
   class accession(val acc: String, val locus: String) {
@@ -20,8 +31,10 @@ case object ncbiHeaders {
     def apply(acc: String, locus: String): accession = new accession(acc,locus)
   }
 
+  // NOTE the order is important in this record
   case object ncbiHeader extends RecordType(gb :×: gi :×: name :×: |[AnyType]) {
 
+    // we do need better records :(
     type RealRaw = (gb.type := gb.Raw) :: (gi.type := gi.Raw) :: (name.type := name.Raw) :: *[AnyDenotation]
 
     implicit def buh(v: ncbiHeader.type := ncbiHeader.RealRaw): ncbiHeaderOps = ncbiHeaderOps(v.value)
@@ -42,10 +55,6 @@ case object ncbiHeaders {
       toHeader at { u => s" ${u.value}" }
   }
 
-  case object ncbiHeaderOps {
-
-
-  }
   case class ncbiHeaderOps(v: ncbiHeader.RealRaw) extends AnyVal {
 
     def asFastaHeader: fasta.header.type := fasta.FastaHeader =
