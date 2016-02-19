@@ -21,6 +21,30 @@ class NcbiHeadersTests extends FunSuite {
     println { randomIds.asFastaHeader.value.asString }
     println { randomIds.asFastqId.value.asString }
   }
+
+  test("ncbi ids example use") {
+
+    // use the ids before and the sequence, Note the ugly seq etc
+    val seq = """
+    ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATC
+    ATCCACGA
+    TTTCACAACAGTGTCAACTGACCCCCCCCCCCCCCCCCCCCCCCCCCC
+    CCCTACATATAATATATATATACCCGA
+    CCCCCTTCTACACTCCCCCCCCCCCACATGGTCATAC
+    ACACACCCCCCCCCCCCCC
+    AACT
+    ACACACCCCCCCC
+    TTTTCTCTCCCCCTTTTTTTT
+    """
+
+    val fa = FASTA(
+      randomIds.asFastaHeader   ::
+      sequence(FastaLines(seq)) ::
+      *[AnyDenotation]
+    )
+
+    println { fa.toLines }    
+  }
 }
 
 ```

@@ -1,0 +1,4 @@
+Significant changes:
+
+- update build plugin to a stable version
+- add a simple ncbi ids representation, together with conversions to FASTA/FASTQ header/id
