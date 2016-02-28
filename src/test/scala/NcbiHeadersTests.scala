@@ -16,8 +16,8 @@ class NcbiHeadersTests extends FunSuite {
 
   test("can construct a header string from an ncbi record value") {
 
-    println { randomIds.asFastaHeader.value.asString }
-    println { randomIds.asFastqId.value.asString }
+    val a1 = randomIds.asFastaHeader.value.asString
+    val a2 = randomIds.asFastqId.value.asString
   }
 
   test("ncbi ids example use") {
@@ -40,7 +40,5 @@ class NcbiHeadersTests extends FunSuite {
       sequence(FastaSequence(seq)) ::
       *[AnyDenotation]
     )
-
-    println { fa.toLines }    
   }
 }

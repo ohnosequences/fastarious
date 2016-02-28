@@ -113,6 +113,7 @@ case object fasta {
   */
   final def parseFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
 
+    // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
     def hasNext = lines.hasNext
 
     var isFirst: Boolean = true
