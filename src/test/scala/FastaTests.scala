@@ -54,6 +54,19 @@ class FastaTests extends FunSuite {
     assert { lsSplit.filter(l => (l.length <= 70) || l.startsWith(">")) === lsSplit }
   }
 
+  test("id and description == header value") {
+
+    val fa = FASTA(
+      header( FastaHeader("adsfa12312 que bonita secuencia") )  ::
+      sequence( FastaSequence("AATATAT ATA TACACAC AAATC"))     ::
+      *[AnyDenotation]
+    )
+
+    assert { s"${fa.getV(header).id}${fa.getV(header).description}" === fa.getV(header).value }
+  }
+
+
+
   test("generate fasta file") {
 
     val fastaFile = file"test.fasta"

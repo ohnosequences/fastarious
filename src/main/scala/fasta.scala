@@ -61,6 +61,7 @@ case object fasta {
     final def asString: String = s"${header.start}${value}"
 
     final def id: String = value.takeWhile(_ != ' ')
+    final def description: String = value.stripPrefix(id)
   }
 
   case object FastaSequence {
