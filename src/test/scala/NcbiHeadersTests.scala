@@ -37,7 +37,7 @@ class NcbiHeadersTests extends FunSuite {
 
     val fa = FASTA(
       randomIds.asFastaHeader   ::
-      sequence(FastaLines(seq)) ::
+      sequence(FastaSequence(seq)) ::
       *[AnyDenotation]
     )
 
