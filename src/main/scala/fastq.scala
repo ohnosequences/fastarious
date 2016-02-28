@@ -99,7 +99,7 @@ case object fastq {
     : FASTA := ((fasta.header.type := fasta.header.Raw) :: (fasta.sequence.type := fasta.sequence.Raw) :: *[AnyDenotation]) =
       FASTA(
         fasta.header( me.getV(id) toFastaHeader )                  ::
-        fasta.sequence( FastaLines((me getV sequence).asString) )  :: *[AnyDenotation]
+        fasta.sequence( FastaSequence((me getV sequence).asString) )  :: *[AnyDenotation]
       )
 
     def toLines(implicit

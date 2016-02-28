@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 
 import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fasta._
+import better.files._
 
 class FastaTests extends FunSuite {
 
@@ -11,7 +12,7 @@ class FastaTests extends FunSuite {
 
     val f = FASTA(
       header(FastaHeader(">@HUGHA5.ADFDA#")) ::
-      sequence(FastaLines("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATC")) :: *[AnyDenotation]
+      sequence(FastaSequence("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATC")) :: *[AnyDenotation]
     )
   }
 
@@ -29,7 +30,7 @@ class FastaTests extends FunSuite {
 
     val f = FASTA(
       header(FastaHeader(h))    ::
-      sequence(FastaLines(seq)) :: *[AnyDenotation]
+      sequence(FastaSequence(seq)) :: *[AnyDenotation]
     )
 
     assert {
@@ -44,16 +45,83 @@ class FastaTests extends FunSuite {
 
     val f = FASTA(
       header(FastaHeader(h))    ::
-      sequence(FastaLines(seq)) :: *[AnyDenotation]
+      sequence(FastaSequence(seq)) :: *[AnyDenotation]
     )
 
     val ls = f.toLines
+    val lsSplit = ls.split('\n')
 
-    assert { ls.filter(l => (l.length <= 70) || l.startsWith(">")) === ls }
+    assert { lsSplit.filter(l => (l.length <= 70) || l.startsWith(">")) === lsSplit }
   }
 
-  ignore("reasonable header behavior") {
+  test("id and description == header value") {
 
-    // TODO
+    val fa = FASTA(
+      header( FastaHeader("adsfa12312 que bonita secuencia") )  ::
+      sequence( FastaSequence("AATATAT ATA TACACAC AAATC"))     ::
+      *[AnyDenotation]
+    )
+
+    assert { s"${fa.getV(header).id}${fa.getV(header).description}" === fa.getV(header).value }
+  }
+
+
+
+  test("generate fasta file") {
+
+    val fastaFile = file"test.fasta"
+    fastaFile.clear
+
+    val id = FastaHeader("id|12312312 una secuencia cualquiera")
+    val randomLines = FastaSequence("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCCCCCCTTCTACACTCCCCCCCCCCCACATGGTCATTTCTACACACCCCCCCCCCCCCCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGCATCCCTACATATACTTCTCGTCATACTCATACATACACCCCCCCCCCCACAGGGGTCCATACAAAGGGCTTATATCCCCACGGGTCTTTTTCACTTCATATTTTTGGGGGCCTCGCGCGCCCTTAC")
+
+    // somewhere around 2MB
+    for(i <- 1 to 10000) {
+
+      val l = FASTA(
+        (header   := id)           ::
+        (sequence := randomLines)  ::
+        *[AnyDenotation]
+      )
+      .toLines
+
+      fastaFile.append(l)
+    }
+  }
+
+  test("parsing from iterator") {
+
+    val fastaFile   = file"test.fasta"
+    val parsedFile  = file"parsed.fasta"
+    parsedFile.clear
+
+    val lines = fastaFile.lines
+    val asMaps = fasta.parseFromLines(lines)
+
+    asMaps.foreach {
+      map => (FASTA parse map) match {
+        case Right(fa) => parsedFile.append( fa.toLines )
+        case Left(err) => ()
+      }
+    }
+  }
+
+  ignore("raw parsing from iterator") {
+
+    val fastaFile   = file"test.fasta"
+    val parsedFile  = file"parsed-raw.fasta"
+    parsedFile.clear
+
+    val lines = fastaFile.lines
+    val asMaps = fasta.parseFromLines(lines)
+
+    asMaps.foreach {
+      map => {
+
+        parsedFile.appendLines(s">${map("header")}")
+        parsedFile.appendLines(map("sequence").grouped(70).mkString("\n"))
+      }
+    }
+
   }
 }
