@@ -111,7 +111,7 @@ case object fasta {
 
     **NOTE** the `lines` iterator should *not* be used after calling `parseFromLines` on it.
   */
-  final def parseFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
+  final def parseMapFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
 
     // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
     def hasNext = lines.hasNext
@@ -145,4 +145,21 @@ case object fasta {
       )
     }
   }
+
+  /*
+    Exactly the same as `parseMapFromLines`, but returning either a parsing error or a `FASTA` denotation.
+  */
+  // TODO update after gettting good Raw in cosas records
+  final def parseFastaFromLines(lines: Iterator[String])
+  : Iterator[
+      Either[
+        ParseDenotationsError,
+        FASTA.type := (
+          (header.type := FastaHeader)      ::
+          (sequence.type := FastaSequence)  ::
+          *[AnyDenotation]
+        )
+      ]
+    ]
+  = parseMapFromLines(lines) map { strMap => FASTA parse strMap }
 }
