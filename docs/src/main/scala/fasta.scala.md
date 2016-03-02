@@ -69,6 +69,7 @@ The `FASTA` record is what you use for sane interaction with fasta elements.
     final def asString: String = s"${header.start}${value}"
 
     final def id: String = value.takeWhile(_ != ' ')
+    final def description: String = value.stripPrefix(id)
   }
 
   case object FastaSequence {
@@ -124,8 +125,9 @@ This method returns an iterator over `Map[String, String]` which can be directly
 
 
 ```scala
-  final def parseFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
+  final def parseMapFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
 
+    // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
     def hasNext = lines.hasNext
 
     var isFirst: Boolean = true
@@ -157,6 +159,26 @@ This method returns an iterator over `Map[String, String]` which can be directly
       )
     }
   }
+```
+
+
+Exactly the same as `parseMapFromLines`, but returning either a parsing error or a `FASTA` denotation.
+
+
+```scala
+  // TODO update after gettting good Raw in cosas records
+  final def parseFastaFromLines(lines: Iterator[String])
+  : Iterator[
+      Either[
+        ParseDenotationsError,
+        FASTA.type := (
+          (header.type := FastaHeader)      ::
+          (sequence.type := FastaSequence)  ::
+          *[AnyDenotation]
+        )
+      ]
+    ]
+  = parseMapFromLines(lines) map { strMap => FASTA parse strMap }
 }
 
 ```

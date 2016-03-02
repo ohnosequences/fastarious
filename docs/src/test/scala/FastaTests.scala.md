@@ -56,6 +56,19 @@ class FastaTests extends FunSuite {
     assert { lsSplit.filter(l => (l.length <= 70) || l.startsWith(">")) === lsSplit }
   }
 
+  test("id and description == header value") {
+
+    val fa = FASTA(
+      header( FastaHeader("adsfa12312 que bonita secuencia") )  ::
+      sequence( FastaSequence("AATATAT ATA TACACAC AAATC"))     ::
+      *[AnyDenotation]
+    )
+
+    assert { s"${fa.getV(header).id}${fa.getV(header).description}" === fa.getV(header).value }
+  }
+
+
+
   test("generate fasta file") {
 
     val fastaFile = file"test.fasta"
@@ -85,28 +98,25 @@ class FastaTests extends FunSuite {
     parsedFile.clear
 
     val lines = fastaFile.lines
-    val asMaps = fasta.parseFromLines(lines)
+    val asFasta = fasta.parseFastaFromLines(lines)
 
-    asMaps.foreach {
-      map => (FASTA parse map) match {
-        case Right(fa) => parsedFile.append( fa.toLines )
-        case Left(err) => ()
-      }
+    asFasta.foreach {
+      case Right(fa) => parsedFile.append( fa.toLines )
+      case Left(err) => ()
     }
   }
 
-  ignore("raw parsing from iterator") {
+  test("raw parsing from iterator") {
 
     val fastaFile   = file"test.fasta"
     val parsedFile  = file"parsed-raw.fasta"
     parsedFile.clear
 
     val lines = fastaFile.lines
-    val asMaps = fasta.parseFromLines(lines)
+    val asMaps = fasta.parseMapFromLines(lines)
 
     asMaps.foreach {
       map => {
-
         parsedFile.appendLines(s">${map("header")}")
         parsedFile.appendLines(map("sequence").grouped(70).mkString("\n"))
       }
