@@ -1,0 +1,4 @@
+
+- add parsing FASTA from file, returning both maps and FASTA denotations
+- add id and description methods to fasta header
+- better FASTA docs
