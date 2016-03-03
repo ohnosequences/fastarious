@@ -32,5 +32,44 @@ class FastqTests extends FunSuite {
     val buh = parseFastqFromLines(lines)
   }
 
+  test("generate fastq file") {
+
+    val i = "@HADFAQ!!:$#>#$@"
+    val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
+    val p = "+hola soy una línea perdida!"
+    val qual = "#$adF!#$DAFAFa5++0-afd324safd"
+
+    val fq = FASTQ(
+      id(FastqId(i))                ::
+      sequence(FastqSequence(seq))  ::
+      plus(FastqPlus(p))            ::
+      quality(FastqQuality(qual))   ::
+      *[AnyDenotation]
+    )
+
+    val fastqFile = file"test.fastq"
+    fastqFile.clear
+
+    val fastqs = Iterator.fill(10000)(fq)
+    fastqs appendTo fastqFile
+  }
+
+  test("parsing from iterator") {
+
+    val fastaFile   = file"test.fastq"
+    val parsedFile  = file"parsed.fastq"
+    parsedFile.clear
+
+    import java.nio.file._
+    import scala.collection.JavaConversions._
+
+    val lines   = Files.lines(fastaFile.path).iterator
+    val asFastq = fastq.parseFastqFromLines(lines) map {
+      case Right(fa) => fa
+    }
+
+    asFastq appendTo parsedFile
+  }
+
 
 }

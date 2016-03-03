@@ -18,6 +18,7 @@ data/out/
 test.fasta
 test.fastq
 parsed.fasta
+parsed.fastq
 parsed-raw.fasta
 
 .tags*

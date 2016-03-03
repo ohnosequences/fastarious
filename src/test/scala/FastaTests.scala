@@ -84,9 +84,10 @@ class FastaTests extends FunSuite {
       (sequence := randomLines)  ::
       *[AnyDenotation]
     )
-    .toLines
 
-    for(i <- 1 to 100000) { fastaFile.append(l); fastaFile.appendNewLine  }
+    val fastas = Iterator.fill(10000)(l)
+
+    fastas appendTo fastaFile
   }
 
   test("parsing from iterator") {
