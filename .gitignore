@@ -16,6 +16,7 @@ data/out/
 
 # test files
 test.fasta
+test.fastq
 parsed.fasta
 parsed-raw.fasta
 

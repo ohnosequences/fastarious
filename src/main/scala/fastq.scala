@@ -16,16 +16,50 @@ case object fastq {
     id        :×:
     sequence  :×:
     plus      :×:
-    quality   :×: |[AnyType]
+    quality   :×:
+    |[AnyType]
   )
   {
     implicit def fastqOps[RV <: FASTQ.Raw](fq: FASTQ.type := RV): FASTQOps[RV] = FASTQOps(fq.value)
+
+    import better.files.File
+    implicit class FASTQIteratorOps(val fastqs: Iterator[
+        FASTQ.type := (
+          (id.type        := id.Raw)        ::
+          (sequence.type  := sequence.Raw)  ::
+          (plus.type      := plus.Raw)      ::
+          (quality.type   := quality.Raw)   ::
+          *[AnyDenotation]
+        )
+      ]
+    ) extends AnyVal {
+
+      def appendTo(file: File) = {
+
+        import java.io._
+        val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+
+        fastqs.foreach { fa => { wr.write( fa.toLines ); wr.newLine } }
+
+        wr.close
+      }
+    }
   }
 
   implicit lazy val idSerializer =
     new DenotationSerializer(id, id.label)({ v: FastqId => Some(v asString) })
   implicit lazy val idParser =
     new DenotationParser(id, id.label)({ v: String => Some(FastqId(v)) })
+
+  implicit lazy val sequenceSerializer =
+    new DenotationSerializer(sequence, sequence.label)({ v: FastqSequence => Some(v asString) })
+  implicit lazy val sequenceParser =
+    new DenotationParser(sequence, sequence.label)({ v: String => Some(FastqSequence(v)) })
+
+  implicit lazy val qualitySerializer =
+    new DenotationSerializer(quality, quality.label)({ v: FastqQuality => Some(v asString) })
+  implicit lazy val qualityParser =
+    new DenotationParser(quality, quality.label)({ v: String => Some(FastqQuality(v)) })
 
   implicit lazy val plusSerializer =
     new DenotationSerializer(plus, plus.label)({ v: FastqPlus => Some(v asString) })
@@ -98,22 +132,48 @@ case object fastq {
     )
     : FASTA := ((fasta.header.type := fasta.header.Raw) :: (fasta.sequence.type := fasta.sequence.Raw) :: *[AnyDenotation]) =
       FASTA(
-        fasta.header( me.getV(id) toFastaHeader )                  ::
-        fasta.sequence( FastaSequence((me getV sequence).asString) )  :: *[AnyDenotation]
+        fasta.header( me.getV(id).toFastaHeader )                   ::
+        fasta.sequence( FastaSequence(me.getV(sequence).asString) ) :: *[AnyDenotation]
       )
 
     def toLines(implicit
-      getId: AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
-      getSeq: AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw },
-      getPlus: AnyApp1At[findS[AnyDenotation.Of[plus.type]],RV] { type Y = plus.type := plus.Raw },
-      getQual: AnyApp1At[findS[AnyDenotation.Of[quality.type]],RV] { type Y = quality.type := quality.Raw }
+      getId   : AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
+      getSeq  : AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw },
+      getPlus : AnyApp1At[findS[AnyDenotation.Of[plus.type]], RV] { type Y = plus.type := plus.Raw },
+      getQual : AnyApp1At[findS[AnyDenotation.Of[quality.type]],RV] { type Y = quality.type := quality.Raw }
     )
-    : Seq[String] =
-      Seq(
-        (me getV id)       .asString,
-        (me getV sequence) .asString,
-        (me getV plus)     .asString,
-        (me getV quality)  .asString
-      )
+    : String =
+    s"${(me getV id).asString}\n${(me getV sequence).asString}\n${(me getV plus).asString}\n${(me getV quality).asString}"
   }
+
+  def parseMapFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = {
+
+    // NOTE much unsafe, should check for id and qual chars etc
+    lines.grouped(4) map {
+      quartet => {
+        Map(
+          id.label        -> quartet(0),
+          sequence.label  -> quartet(1),
+          plus.label      -> quartet(2),
+          quality.label   -> quartet(3)
+        )
+      }
+    }
+  }
+
+  def parseFastqFromLines(lines: Iterator[String])
+  : Iterator[
+      Either[
+        ParseDenotationsError,
+        FASTQ.type := (
+          (id.type        := id.Raw)        ::
+          (sequence.type  := sequence.Raw)  ::
+          (plus.type      := plus.Raw)      ::
+          (quality.type   := quality.Raw)   ::
+          *[AnyDenotation]
+        )
+      ]
+    ]
+  = parseMapFromLines(lines) map { strMap => FASTQ parse strMap }
+
 }

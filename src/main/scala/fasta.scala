@@ -48,6 +48,27 @@ case object fasta {
   {
     // TODO after updating cosas, remove the RV param; the FASTA.Raw type is fixed
     implicit def fastaOps[RV <: FASTA.Raw](fa: FASTA := RV): FASTAOps[RV] = new FASTAOps[RV](fa.value)
+    
+    import better.files._
+    implicit class FASTAIteratorOps(val fastas: Iterator[
+        FASTA.type := (
+          (header.type := FastaHeader)      ::
+          (sequence.type := FastaSequence)  ::
+          *[AnyDenotation]
+        )
+      ]
+    ) extends AnyVal {
+
+      def appendTo(file: File) = {
+
+        import java.io._
+        val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+
+        fastas.foreach { fa => { wr.write( fa.toLines ); wr.newLine } }
+
+        wr.close
+      }
+    }
   }
 
   case object FastaHeader {
@@ -88,7 +109,7 @@ case object fasta {
       getH: AnyApp1At[findS[AnyDenotation { type Tpe = header.type }],RV] { type Y = header.type := header.Raw },
       getS: AnyApp1At[findS[AnyDenotation { type Tpe = sequence.type }],RV] { type Y = sequence.type := sequence.Raw }
     )
-    : String = s"${fa.head.value.asString}\n${fa.tail.head.value.lines.grouped(70).mkString("\n")}\n"
+    : String = s"${fa.head.value.asString}\n${fa.tail.head.value.lines.grouped(70).mkString("\n")}"
   }
 
   /*
@@ -121,9 +142,8 @@ case object fasta {
 
     def next() = {
 
-      if(isFirst) { isFirst = false; currentHeader = lines.next }
-
       val currentLines = new StringBuilder
+      if(isFirst) { isFirst = false; currentHeader = lines.next }
 
       import util.control.Breaks._
 
@@ -138,10 +158,9 @@ case object fasta {
         }
       }
 
-      val ss = currentLines.toString
       collection.immutable.HashMap(
         header.label    -> currentHeader,
-        sequence.label  -> ss
+        sequence.label  -> currentLines.toString
       )
     }
   }

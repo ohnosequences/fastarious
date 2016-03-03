@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 
 import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fastq._
+import better.files._
 
 class FastqTests extends FunSuite {
 
@@ -18,7 +19,18 @@ class FastqTests extends FunSuite {
       id(FastqId(i))                ::
       sequence(FastqSequence(seq))  ::
       plus(FastqPlus(p))            ::
-      quality(FastqQuality(qual))   :: *[AnyDenotation]
+      quality(FastqQuality(qual))   ::
+      *[AnyDenotation]
     )
   }
+
+  test("can parse fastq files") {
+
+    val input = file"test.fastq"
+    val lines = input.lineIterator
+
+    val buh = parseFastqFromLines(lines)
+  }
+
+
 }
