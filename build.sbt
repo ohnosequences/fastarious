@@ -10,7 +10,7 @@ libraryDependencies ++= Seq(
   "ohnosequences"         %% "cosas"        % "0.8.0",
   "com.github.pathikrit"  %% "better-files" % "2.13.0",
 
-  "org.scalatest" %% "scalatest" % "2.2.5" % Test
+  "org.scalatest"         %% "scalatest"    % "2.2.5"   % Test
 )
 
 wartremoverExcluded ++= Seq(

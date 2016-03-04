@@ -1,6 +1,7 @@
 package ohnosequences.fastarious
 
 import ohnosequences.cosas._, types._, records._, fns._, klists._
+import better.files._
 
 /*
   # FASTA
@@ -53,6 +54,20 @@ case object fasta {
     type Value = FASTA := RealRaw
 
     implicit def fastaOps(fa: FASTA.Value): FASTAOps = new FASTAOps(fa)
+    implicit def fastaIteratorOps(fas: Iterator[FASTA.Value]): FASTAIteratorOps = new FASTAIteratorOps(fas)
+  }
+
+  final class FASTAIteratorOps(val fastas: Iterator[FASTA.Value]) extends AnyVal {
+
+    def appendTo(file: File) = {
+
+      import java.io._
+      val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+
+      fastas.foreach { fa => { wr.write( fa.asString ); wr.newLine } }
+
+      wr.close
+    }
   }
 
 
@@ -78,10 +93,10 @@ case object fasta {
       new FastaSequence( utils.removeAllSpace(l) )
   }
 
-  final class FastaSequence private(val lines: String) extends AnyVal {
+  final class FastaSequence private(val value: String) extends AnyVal {
 
     final def ++(other: FastaSequence): FastaSequence =
-      FastaSequence(s"${lines}${other.lines}")
+      FastaSequence(s"${value}${other.value}")
   }
 
   final class FASTAOps(val fa: FASTA.Value) extends AnyVal {
@@ -90,7 +105,7 @@ case object fasta {
 
     def toMap: Map[String, String] = Map(
       header.label   -> (fa getV header).toString,
-      sequence.label -> (fa getV sequence).lines.grouped(70).mkString("\n")
+      sequence.label -> (fa getV sequence).value.grouped(70).mkString("\n")
     )
 
     def asString: String = toMap.values.mkString("\n")
@@ -107,7 +122,7 @@ case object fasta {
     new DenotationParser(header, header.label)({ v: String => Some(FastaHeader(v)) })
 
   implicit lazy val sequenceSerializer =
-    new DenotationSerializer(sequence, sequence.label)({ fl: FastaSequence => Some(fl.lines) })
+    new DenotationSerializer(sequence, sequence.label)({ fl: FastaSequence => Some(fl.value) })
   implicit lazy val sequenceParser =
     new DenotationParser(sequence, sequence.label)({ v: String => Some(FastaSequence(v)) })
 
@@ -116,7 +131,7 @@ case object fasta {
 
     **NOTE** the `lines` iterator should *not* be used after calling `parseFromLines` on it.
   */
-  final def parseMapFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
+  final def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
 
     // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
     def hasNext = lines.hasNext
@@ -126,9 +141,8 @@ case object fasta {
 
     def next() = {
 
-      if(isFirst) { isFirst = false; currentHeader = lines.next }
-
       val currentLines = new StringBuilder
+      if(isFirst) { isFirst = false; currentHeader = lines.next }
 
       import util.control.Breaks._
 
@@ -143,10 +157,9 @@ case object fasta {
         }
       }
 
-      val ss = currentLines.toString
       collection.immutable.HashMap(
         header.label    -> currentHeader,
-        sequence.label  -> ss
+        sequence.label  -> currentLines.toString
       )
     }
   }
@@ -154,7 +167,27 @@ case object fasta {
   /*
     Exactly the same as `parseMapFromLines`, but returning either a parsing error or a `FASTA` denotation.
   */
-  final def parseFastaFromLines(lines: Iterator[String])
-  : Iterator[ Either[ParseDenotationsError, FASTA.Value] ]
-  = parseMapFromLines(lines) map { strMap => FASTA parse strMap }
+  // TODO update after gettting good Raw in cosas records
+  final def parseFasta(lines: Iterator[String])
+  : Iterator[
+      Either[
+        ParseDenotationsError,
+        FASTA.type := (
+          (header.type := FastaHeader)      ::
+          (sequence.type := FastaSequence)  ::
+          *[AnyDenotation]
+        )
+      ]
+    ]
+  = parseMap(lines) map { strMap => FASTA parse strMap }
+
+  final def parseFastaDropErrors(lines: Iterator[String])
+  : Iterator[
+      FASTA.type := (
+        (header.type := FastaHeader)      ::
+        (sequence.type := FastaSequence)  ::
+        *[AnyDenotation]
+      )
+    ]
+  = parseFasta(lines) collect { case Right(fa) => fa }
 }
