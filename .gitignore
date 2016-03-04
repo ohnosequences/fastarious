@@ -15,11 +15,8 @@ data/in/
 data/out/
 
 # test files
-test.fasta
-test.fastq
-parsed.fasta
-parsed.fastq
-parsed-raw.fasta
+*.fasta
+*.fastq
 
 .tags*
 .sublime*
