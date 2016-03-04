@@ -44,21 +44,26 @@ case object fasta {
     header    :×:
     sequence  :×:
     |[AnyType]
-  )
-  {
-    // TODO after updating cosas, remove the RV param; the FASTA.Raw type is fixed
-    implicit def fastaOps[RV <: FASTA.Raw](fa: FASTA := RV): FASTAOps[RV] = new FASTAOps[RV](fa.value)
+  ) {
+    type RealRaw =
+      (header.type := FastaHeader) ::
+      (sequence.type := FastaSequence) ::
+      *[AnyDenotation]
+
+    type Value = FASTA := RealRaw
+
+    implicit def fastaOps(fa: FASTA.Value): FASTAOps = new FASTAOps(fa)
   }
+
 
   case object FastaHeader {
 
-    def apply(h: String): FastaHeader =
-      if(h startsWith header.start) new FastaHeader(h drop 1) else new FastaHeader(h)
+    def apply(h: String): FastaHeader = new FastaHeader(h.stripPrefix(header.start))
   }
 
   final class FastaHeader private[fastarious](val value: String) extends AnyVal {
 
-    final def asString: String = s"${header.start}${value}"
+    override def toString: String = s"${header.start}${value}"
 
     final def id: String = value.takeWhile(_ != ' ')
     final def description: String = value.stripPrefix(id)
@@ -79,16 +84,16 @@ case object fasta {
       FastaSequence(s"${lines}${other.lines}")
   }
 
-  final class FASTAOps[RV <: FASTA.Raw](val fa: RV) extends AnyVal {
+  final class FASTAOps(val fa: FASTA.Value) extends AnyVal {
 
-    @inline private def me: FASTA := RV = FASTA(fa)
+    // instead of toLines, which is a confusing name anyway
 
-    // TODO remove all the implicits once we have a better FASTA.Raw type
-    def toLines(implicit
-      getH: AnyApp1At[findS[AnyDenotation { type Tpe = header.type }],RV] { type Y = header.type := header.Raw },
-      getS: AnyApp1At[findS[AnyDenotation { type Tpe = sequence.type }],RV] { type Y = sequence.type := sequence.Raw }
+    def toMap: Map[String, String] = Map(
+      header.label   -> (fa getV header).toString,
+      sequence.label -> (fa getV sequence).lines.grouped(70).mkString("\n")
     )
-    : String = s"${fa.head.value.asString}\n${fa.tail.head.value.lines.grouped(70).mkString("\n")}\n"
+
+    def asString: String = toMap.values.mkString("\n")
   }
 
   /*
@@ -97,7 +102,7 @@ case object fasta {
     These are parser and serializers instances for the `FASTA` record field. They make possible transparent use of *cosas* record parsing from `Map[String,String]`.
   */
   implicit lazy val headerSerializer =
-    new DenotationSerializer(header, header.label)({ h: FastaHeader => Some(h.asString) })
+    new DenotationSerializer(header, header.label)({ h: FastaHeader => Some(h.toString) })
   implicit lazy val headerParser =
     new DenotationParser(header, header.label)({ v: String => Some(FastaHeader(v)) })
 
@@ -149,17 +154,7 @@ case object fasta {
   /*
     Exactly the same as `parseMapFromLines`, but returning either a parsing error or a `FASTA` denotation.
   */
-  // TODO update after gettting good Raw in cosas records
   final def parseFastaFromLines(lines: Iterator[String])
-  : Iterator[
-      Either[
-        ParseDenotationsError,
-        FASTA.type := (
-          (header.type := FastaHeader)      ::
-          (sequence.type := FastaSequence)  ::
-          *[AnyDenotation]
-        )
-      ]
-    ]
+  : Iterator[ Either[ParseDenotationsError, FASTA.Value] ]
   = parseMapFromLines(lines) map { strMap => FASTA parse strMap }
 }

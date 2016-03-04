@@ -48,7 +48,7 @@ class FastaTests extends FunSuite {
       sequence(FastaSequence(seq)) :: *[AnyDenotation]
     )
 
-    val ls = f.toLines
+    val ls = f.asString
     val lsSplit = ls.split('\n')
 
     assert { lsSplit.filter(l => (l.length <= 70) || l.startsWith(">")) === lsSplit }
@@ -78,12 +78,11 @@ class FastaTests extends FunSuite {
     // somewhere around 2MB
     for(i <- 1 to 10000) {
 
-      val l = FASTA(
+      val l: String = FASTA(
         (header   := id)           ::
         (sequence := randomLines)  ::
         *[AnyDenotation]
-      )
-      .toLines
+      ).asString
 
       fastaFile.append(l)
     }
@@ -99,7 +98,7 @@ class FastaTests extends FunSuite {
     val asFasta = fasta.parseFastaFromLines(lines)
 
     asFasta.foreach {
-      case Right(fa) => parsedFile.append( fa.toLines )
+      case Right(fa) => parsedFile.append( fa.asString )
       case Left(err) => ()
     }
   }
