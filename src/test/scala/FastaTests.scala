@@ -6,6 +6,7 @@ import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fasta._
 import better.files._
 
+
 class FastaTests extends FunSuite {
 
   test("can create FASTA values") {
@@ -29,8 +30,9 @@ class FastaTests extends FunSuite {
     """
 
     val f = FASTA(
-      header(FastaHeader(h))    ::
-      sequence(FastaSequence(seq)) :: *[AnyDenotation]
+      header(FastaHeader(h))        ::
+      sequence(FastaSequence(seq))  ::
+      *[AnyDenotation]
     )
 
     assert {
@@ -44,11 +46,12 @@ class FastaTests extends FunSuite {
     val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
 
     val f = FASTA(
-      header(FastaHeader(h))    ::
-      sequence(FastaSequence(seq)) :: *[AnyDenotation]
+      header(FastaHeader(h))        ::
+      sequence(FastaSequence(seq))  ::
+      *[AnyDenotation]
     )
 
-    val ls = f.toLines
+    val ls = f.asString
     val lsSplit = ls.split('\n')
 
     assert { lsSplit.filter(l => (l.length <= 70) || l.startsWith(">")) === lsSplit }
@@ -76,17 +79,15 @@ class FastaTests extends FunSuite {
     val randomLines = FastaSequence("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCCCCCCTTCTACACTCCCCCCCCCCCACATGGTCATTTCTACACACCCCCCCCCCCCCCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGCATCCCTACATATACTTCTCGTCATACTCATACATACACCCCCCCCCCCACAGGGGTCCATACAAAGGGCTTATATCCCCACGGGTCTTTTTCACTTCATATTTTTGGGGGCCTCGCGCGCCCTTAC")
 
     // somewhere around 2MB
-    for(i <- 1 to 10000) {
+    val l = FASTA(
+      (header   := id)           ::
+      (sequence := randomLines)  ::
+      *[AnyDenotation]
+    )
 
-      val l = FASTA(
-        (header   := id)           ::
-        (sequence := randomLines)  ::
-        *[AnyDenotation]
-      )
-      .toLines
+    val fastas = Iterator.fill(10000)(l)
 
-      fastaFile.append(l)
-    }
+    fastas appendTo fastaFile
   }
 
   test("parsing from iterator") {
@@ -95,13 +96,14 @@ class FastaTests extends FunSuite {
     val parsedFile  = file"parsed.fasta"
     parsedFile.clear
 
-    val lines = fastaFile.lines
-    val asFasta = fasta.parseFastaFromLines(lines)
+    import java.nio.file._
+    import scala.collection.JavaConversions._
 
-    asFasta.foreach {
-      case Right(fa) => parsedFile.append( fa.toLines )
-      case Left(err) => ()
-    }
+    // WARNING this will leak file descriptors
+    val lines   = Files.lines(fastaFile.path).iterator
+    val asFasta = fasta.parseFastaDropErrors(lines)
+
+    asFasta appendTo parsedFile
   }
 
   test("raw parsing from iterator") {
@@ -110,8 +112,12 @@ class FastaTests extends FunSuite {
     val parsedFile  = file"parsed-raw.fasta"
     parsedFile.clear
 
-    val lines = fastaFile.lines
-    val asMaps = fasta.parseMapFromLines(lines)
+    import java.nio.file._
+    import scala.collection.JavaConversions._
+
+    // WARNING this will leak file descriptors    
+    val lines   = Files.lines(fastaFile.path).iterator
+    val asMaps  = fasta.parseMap(lines)
 
     asMaps.foreach {
       map => {
