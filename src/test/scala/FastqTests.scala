@@ -29,7 +29,7 @@ class FastqTests extends FunSuite {
     val input = file"test.fastq"
     val lines = input.lineIterator
 
-    val buh = parseFastqFromLines(lines)
+    val buh = parseFastq(lines)
   }
 
   test("generate fastq file") {
@@ -64,9 +64,7 @@ class FastqTests extends FunSuite {
     import scala.collection.JavaConversions._
 
     val lines   = Files.lines(fastaFile.path).iterator
-    val asFastq = fastq.parseFastqFromLines(lines) map {
-      case Right(fa) => fa
-    }
+    val asFastq = fastq.parseFastqDropErrors(lines)
 
     asFastq appendTo parsedFile
   }

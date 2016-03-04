@@ -39,7 +39,7 @@ case object fastq {
         import java.io._
         val wr = new BufferedWriter(new FileWriter(file.toJava, true))
 
-        fastqs.foreach { fa => { wr.write( fa.toLines ); wr.newLine } }
+        fastqs.foreach { fq => { wr.write( fq.asString ); wr.newLine } }
 
         wr.close
       }
@@ -136,17 +136,17 @@ case object fastq {
         fasta.sequence( FastaSequence(me.getV(sequence).asString) ) :: *[AnyDenotation]
       )
 
-    def toLines(implicit
-      getId   : AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
-      getSeq  : AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw },
-      getPlus : AnyApp1At[findS[AnyDenotation.Of[plus.type]], RV] { type Y = plus.type := plus.Raw },
-      getQual : AnyApp1At[findS[AnyDenotation.Of[quality.type]],RV] { type Y = quality.type := quality.Raw }
-    )
-    : String =
-    s"${(me getV id).asString}\n${(me getV sequence).asString}\n${(me getV plus).asString}\n${(me getV quality).asString}"
+    def asString: String =
+      (
+        seq.head.value.asString                 ::
+        seq.tail.head.value.asString            ::
+        seq.tail.tail.head.value.asString       ::
+        seq.tail.tail.tail.head.value.asString  ::
+        Nil
+      ).mkString("\n")
   }
 
-  def parseMapFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = {
+  def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = {
 
     // NOTE much unsafe, should check for id and qual chars etc
     lines.grouped(4) map {
@@ -161,7 +161,7 @@ case object fastq {
     }
   }
 
-  def parseFastqFromLines(lines: Iterator[String])
+  def parseFastq(lines: Iterator[String])
   : Iterator[
       Either[
         ParseDenotationsError,
@@ -174,6 +174,18 @@ case object fastq {
         )
       ]
     ]
-  = parseMapFromLines(lines) map { strMap => FASTQ parse strMap }
+  = parseMap(lines) map { strMap => FASTQ parse strMap }
+
+  def parseFastqDropErrors(lines: Iterator[String])
+  : Iterator[
+      FASTQ.type := (
+        (id.type        := id.Raw)        ::
+        (sequence.type  := sequence.Raw)  ::
+        (plus.type      := plus.Raw)      ::
+        (quality.type   := quality.Raw)   ::
+        *[AnyDenotation]
+      )
+    ]
+  = parseFastq(lines) collect { case Right(fq) => fq }
 
 }

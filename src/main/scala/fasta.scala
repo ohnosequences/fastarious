@@ -48,7 +48,7 @@ case object fasta {
   {
     // TODO after updating cosas, remove the RV param; the FASTA.Raw type is fixed
     implicit def fastaOps[RV <: FASTA.Raw](fa: FASTA := RV): FASTAOps[RV] = new FASTAOps[RV](fa.value)
-    
+
     import better.files._
     implicit class FASTAIteratorOps(val fastas: Iterator[
         FASTA.type := (
@@ -64,7 +64,7 @@ case object fasta {
         import java.io._
         val wr = new BufferedWriter(new FileWriter(file.toJava, true))
 
-        fastas.foreach { fa => { wr.write( fa.toLines ); wr.newLine } }
+        fastas.foreach { fa => { wr.write( fa.asString ); wr.newLine } }
 
         wr.close
       }
@@ -94,10 +94,10 @@ case object fasta {
       new FastaSequence( utils.removeAllSpace(l) )
   }
 
-  final class FastaSequence private(val lines: String) extends AnyVal {
+  final class FastaSequence private(val value: String) extends AnyVal {
 
     final def ++(other: FastaSequence): FastaSequence =
-      FastaSequence(s"${lines}${other.lines}")
+      FastaSequence(s"${value}${other.value}")
   }
 
   final class FASTAOps[RV <: FASTA.Raw](val fa: RV) extends AnyVal {
@@ -105,11 +105,7 @@ case object fasta {
     @inline private def me: FASTA := RV = FASTA(fa)
 
     // TODO remove all the implicits once we have a better FASTA.Raw type
-    def toLines(implicit
-      getH: AnyApp1At[findS[AnyDenotation { type Tpe = header.type }],RV] { type Y = header.type := header.Raw },
-      getS: AnyApp1At[findS[AnyDenotation { type Tpe = sequence.type }],RV] { type Y = sequence.type := sequence.Raw }
-    )
-    : String = s"${fa.head.value.asString}\n${fa.tail.head.value.lines.grouped(70).mkString("\n")}"
+    def asString: String = (fa.head.value.asString ++ fa.tail.head.value.value.grouped(70)).mkString("\n")
   }
 
   /*
@@ -123,7 +119,7 @@ case object fasta {
     new DenotationParser(header, header.label)({ v: String => Some(FastaHeader(v)) })
 
   implicit lazy val sequenceSerializer =
-    new DenotationSerializer(sequence, sequence.label)({ fl: FastaSequence => Some(fl.lines) })
+    new DenotationSerializer(sequence, sequence.label)({ fl: FastaSequence => Some(fl.value) })
   implicit lazy val sequenceParser =
     new DenotationParser(sequence, sequence.label)({ v: String => Some(FastaSequence(v)) })
 
@@ -132,7 +128,7 @@ case object fasta {
 
     **NOTE** the `lines` iterator should *not* be used after calling `parseFromLines` on it.
   */
-  final def parseMapFromLines(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
+  final def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
 
     // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
     def hasNext = lines.hasNext
@@ -169,7 +165,7 @@ case object fasta {
     Exactly the same as `parseMapFromLines`, but returning either a parsing error or a `FASTA` denotation.
   */
   // TODO update after gettting good Raw in cosas records
-  final def parseFastaFromLines(lines: Iterator[String])
+  final def parseFasta(lines: Iterator[String])
   : Iterator[
       Either[
         ParseDenotationsError,
@@ -180,5 +176,15 @@ case object fasta {
         )
       ]
     ]
-  = parseMapFromLines(lines) map { strMap => FASTA parse strMap }
+  = parseMap(lines) map { strMap => FASTA parse strMap }
+
+  final def parseFastaDropErrors(lines: Iterator[String])
+  : Iterator[
+      FASTA.type := (
+        (header.type := FastaHeader)      ::
+        (sequence.type := FastaSequence)  ::
+        *[AnyDenotation]
+      )
+    ]
+  = parseFasta(lines) collect { case Right(fa) => fa }
 }

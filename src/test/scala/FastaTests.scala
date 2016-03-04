@@ -51,7 +51,7 @@ class FastaTests extends FunSuite {
       *[AnyDenotation]
     )
 
-    val ls = f.toLines
+    val ls = f.asString
     val lsSplit = ls.split('\n')
 
     assert { lsSplit.filter(l => (l.length <= 70) || l.startsWith(">")) === lsSplit }
@@ -100,9 +100,7 @@ class FastaTests extends FunSuite {
     import scala.collection.JavaConversions._
 
     val lines   = Files.lines(fastaFile.path).iterator
-    val asFasta = fasta.parseFastaFromLines(lines) map {
-      case Right(fa) => fa
-    }
+    val asFasta = fasta.parseFastaDropErrors(lines)
 
     asFasta appendTo parsedFile
   }
@@ -114,7 +112,7 @@ class FastaTests extends FunSuite {
     parsedFile.clear
 
     val lines   = fastaFile.lineIterator
-    val asMaps  = fasta.parseMapFromLines(lines)
+    val asMaps  = fasta.parseMap(lines)
 
     asMaps.foreach {
       map => {
