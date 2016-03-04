@@ -99,6 +99,7 @@ class FastaTests extends FunSuite {
     import java.nio.file._
     import scala.collection.JavaConversions._
 
+    // WARNING this will leak file descriptors
     val lines   = Files.lines(fastaFile.path).iterator
     val asFasta = fasta.parseFastaDropErrors(lines)
 
@@ -111,7 +112,11 @@ class FastaTests extends FunSuite {
     val parsedFile  = file"parsed-raw.fasta"
     parsedFile.clear
 
-    val lines   = fastaFile.lineIterator
+    import java.nio.file._
+    import scala.collection.JavaConversions._
+
+    // WARNING this will leak file descriptors    
+    val lines   = Files.lines(fastaFile.path).iterator
     val asMaps  = fasta.parseMap(lines)
 
     asMaps.foreach {

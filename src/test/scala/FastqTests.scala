@@ -27,8 +27,11 @@ class FastqTests extends FunSuite {
   test("can parse fastq files") {
 
     val input = file"test.fastq"
-    val lines = input.lineIterator
 
+    import java.nio.file._
+    import scala.collection.JavaConversions._
+    // WARNING this will leak file descriptors
+    val lines = Files.lines(input.path).iterator
     val buh = parseFastq(lines)
   }
 
@@ -63,6 +66,7 @@ class FastqTests extends FunSuite {
     import java.nio.file._
     import scala.collection.JavaConversions._
 
+    // WARNING this will leak file descriptors
     val lines   = Files.lines(fastaFile.path).iterator
     val asFastq = fastq.parseFastqDropErrors(lines)
 
