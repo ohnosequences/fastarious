@@ -93,7 +93,7 @@ case object fasta {
       new FastaSequence( utils.removeAllSpace(l) )
   }
 
-  final class FastaSequence private(val value: String) extends AnyVal {
+  final class FastaSequence private (val value: String) extends AnyVal {
 
     final def ++(other: FastaSequence): FastaSequence =
       FastaSequence(s"${value}${other.value}")
@@ -139,7 +139,7 @@ case object fasta {
     var isFirst: Boolean = true
     var currentHeader: String = ""
 
-    def next() = {
+    def next = {
 
       val currentLines = new StringBuilder
       if(isFirst) { isFirst = false; currentHeader = lines.next }
