@@ -1,0 +1,5 @@
+
+- better tests for fasta and fastq parsing
+- unify value class, simplify parse method names, add convenience helpers
+- use raw NIO stuff in tests
+- Fixed FASTA and FASTQ real Raw type and added an alias for the Value type using that Raw; changed a bit serialization methods
