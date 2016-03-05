@@ -115,7 +115,7 @@ class FastaTests extends FunSuite {
     import java.nio.file._
     import scala.collection.JavaConversions._
 
-    // WARNING this will leak file descriptors    
+    // WARNING this will leak file descriptors
     val lines   = Files.lines(fastaFile.path).iterator
     val asMaps  = fasta.parseMap(lines)
 

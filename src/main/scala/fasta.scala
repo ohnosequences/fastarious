@@ -1,6 +1,7 @@
 package ohnosequences.fastarious
 
 import ohnosequences.cosas._, types._, records._, fns._, klists._
+import better.files._
 
 /*
   # FASTA
@@ -44,42 +45,40 @@ case object fasta {
     header    :×:
     sequence  :×:
     |[AnyType]
-  )
-  {
-    // TODO after updating cosas, remove the RV param; the FASTA.Raw type is fixed
-    implicit def fastaOps[RV <: FASTA.Raw](fa: FASTA := RV): FASTAOps[RV] = new FASTAOps[RV](fa.value)
+  ) {
+    type RealRaw =
+      (header.type := FastaHeader) ::
+      (sequence.type := FastaSequence) ::
+      *[AnyDenotation]
 
-    import better.files._
-    implicit class FASTAIteratorOps(val fastas: Iterator[
-        FASTA.type := (
-          (header.type := FastaHeader)      ::
-          (sequence.type := FastaSequence)  ::
-          *[AnyDenotation]
-        )
-      ]
-    ) extends AnyVal {
+    type Value = FASTA := RealRaw
 
-      def appendTo(file: File) = {
+    implicit def fastaOps(fa: FASTA.Value): FASTAOps = new FASTAOps(fa)
+    implicit def fastaIteratorOps(fas: Iterator[FASTA.Value]): FASTAIteratorOps = new FASTAIteratorOps(fas)
+  }
 
-        import java.io._
-        val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+  final class FASTAIteratorOps(val fastas: Iterator[FASTA.Value]) extends AnyVal {
 
-        fastas.foreach { fa => { wr.write( fa.asString ); wr.newLine } }
+    def appendTo(file: File) = {
 
-        wr.close
-      }
+      import java.io._
+      val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+
+      fastas.foreach { fa => { wr.write( fa.asString ); wr.newLine } }
+
+      wr.close
     }
   }
 
+
   case object FastaHeader {
 
-    def apply(h: String): FastaHeader =
-      if(h startsWith header.start) new FastaHeader(h drop 1) else new FastaHeader(h)
+    def apply(h: String): FastaHeader = new FastaHeader(h.stripPrefix(header.start))
   }
 
   final class FastaHeader private[fastarious](val value: String) extends AnyVal {
 
-    final def asString: String = s"${header.start}${value}"
+    override def toString: String = s"${header.start}${value}"
 
     final def id: String = value.takeWhile(_ != ' ')
     final def description: String = value.stripPrefix(id)
@@ -94,18 +93,22 @@ case object fasta {
       new FastaSequence( utils.removeAllSpace(l) )
   }
 
-  final class FastaSequence private(val value: String) extends AnyVal {
+  final class FastaSequence private (val value: String) extends AnyVal {
 
     final def ++(other: FastaSequence): FastaSequence =
       FastaSequence(s"${value}${other.value}")
   }
 
-  final class FASTAOps[RV <: FASTA.Raw](val fa: RV) extends AnyVal {
+  final class FASTAOps(val fa: FASTA.Value) extends AnyVal {
 
-    @inline private def me: FASTA := RV = FASTA(fa)
+    // instead of toLines, which is a confusing name anyway
 
-    // TODO remove all the implicits once we have a better FASTA.Raw type
-    def asString: String = (fa.head.value.asString ++ fa.tail.head.value.value.grouped(70)).mkString("\n")
+    def toMap: Map[String, String] = Map(
+      header.label   -> (fa getV header).toString,
+      sequence.label -> (fa getV sequence).value.grouped(70).mkString("\n")
+    )
+
+    def asString: String = toMap.values.mkString("\n")
   }
 
   /*
@@ -114,7 +117,7 @@ case object fasta {
     These are parser and serializers instances for the `FASTA` record field. They make possible transparent use of *cosas* record parsing from `Map[String,String]`.
   */
   implicit lazy val headerSerializer =
-    new DenotationSerializer(header, header.label)({ h: FastaHeader => Some(h.asString) })
+    new DenotationSerializer(header, header.label)({ h: FastaHeader => Some(h.toString) })
   implicit lazy val headerParser =
     new DenotationParser(header, header.label)({ v: String => Some(FastaHeader(v)) })
 
@@ -136,7 +139,7 @@ case object fasta {
     var isFirst: Boolean = true
     var currentHeader: String = ""
 
-    def next() = {
+    def next = {
 
       val currentLines = new StringBuilder
       if(isFirst) { isFirst = false; currentHeader = lines.next }

@@ -20,19 +20,20 @@ case object fastq {
     |[AnyType]
   )
   {
-    implicit def fastqOps[RV <: FASTQ.Raw](fq: FASTQ.type := RV): FASTQOps[RV] = FASTQOps(fq.value)
+
+    type RealRaw =
+      (id.type        := id.Raw)        ::
+      (sequence.type  := sequence.Raw)  ::
+      (plus.type      := plus.Raw)      ::
+      (quality.type   := quality.Raw)   ::
+      *[AnyDenotation]
+
+    type Value = FASTQ := RealRaw
+
+    implicit def fastqOps(fq: Value): FASTQOps = FASTQOps(fq)
 
     import better.files.File
-    implicit class FASTQIteratorOps(val fastqs: Iterator[
-        FASTQ.type := (
-          (id.type        := id.Raw)        ::
-          (sequence.type  := sequence.Raw)  ::
-          (plus.type      := plus.Raw)      ::
-          (quality.type   := quality.Raw)   ::
-          *[AnyDenotation]
-        )
-      ]
-    ) extends AnyVal {
+    implicit class FASTQIteratorOps(val fastqs: Iterator[Value]) extends AnyVal {
 
       def appendTo(file: File) = {
 
@@ -76,7 +77,7 @@ case object fastq {
     }
   }
   // the value here is assumed (and guaranteed) to be '@'-free
-  final class FastqId private[fastarious](val value: String) extends AnyVal {
+  final class FastqId private[fastarious] (val value: String) extends AnyVal {
 
     def toFastaHeader: FastaHeader =
       new FastaHeader(value)
@@ -105,7 +106,7 @@ case object fastq {
     }
   }
   // the value here is assumed (and guaranteed) to be '@'-free
-  final class FastqPlus private[fastarious](val value: String) extends AnyVal {
+  final class FastqPlus private[fastarious] (val value: String) extends AnyVal {
 
     def asString: String =
       s"${plus.start}${value}"
@@ -121,27 +122,19 @@ case object fastq {
     def asString = value
   }
 
-  case class FASTQOps[RV <: FASTQ.Raw](val seq: RV) extends AnyVal {
+  case class FASTQOps(val seq: FASTQ.Value) extends AnyVal {
 
-    @inline private def me: FASTQ := RV =
-      FASTQ(seq)
-
-    def toFASTA(implicit
-      getId: AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
-      getSeq: AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw }
+    def toFASTA: FASTA.Value = FASTA(
+      fasta.header( seq.getV(id).toFastaHeader )                   ::
+      fasta.sequence( FastaSequence(seq.getV(sequence).asString) ) :: *[AnyDenotation]
     )
-    : FASTA := ((fasta.header.type := fasta.header.Raw) :: (fasta.sequence.type := fasta.sequence.Raw) :: *[AnyDenotation]) =
-      FASTA(
-        fasta.header( me.getV(id).toFastaHeader )                   ::
-        fasta.sequence( FastaSequence(me.getV(sequence).asString) ) :: *[AnyDenotation]
-      )
 
     def asString: String =
       (
-        seq.head.value.asString                 ::
-        seq.tail.head.value.asString            ::
-        seq.tail.tail.head.value.asString       ::
-        seq.tail.tail.tail.head.value.asString  ::
+        seq.getV(id).asString                 ::
+        seq.getV(sequence).asString            ::
+        seq.getV(plus).asString       ::
+        seq.getV(quality).asString  ::
         Nil
       ).mkString("\n")
   }
