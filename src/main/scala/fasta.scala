@@ -156,16 +156,16 @@ case object fasta {
             if(nextHeader.isEmpty) {
               // if it's the first header we've encountered
               currentHeader = currentLine
-              nextHeader = currentLine
             } else {
               // otherwise what was "next", became previous
               currentHeader = nextHeader
-              nextHeader = currentLine
-              break
             }
 
+            nextHeader = currentLine
+            if (currentSequence.nonEmpty) break
+
           // otherwise we continue to accumulate the sequence
-          } else {
+          } else if(currentHeader.nonEmpty) {
             currentSequence append currentLine
           }
         }
