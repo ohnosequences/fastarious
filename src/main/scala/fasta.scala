@@ -134,12 +134,11 @@ case object fasta {
   final def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
 
     // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
-    def hasNext = lines.hasNext
-
     var currentHeader: String = ""
     var nextHeader: String = ""
 
-    def next() = {
+    // this tries to parse one read
+    def evalNext: Option[Map[String, String]] = {
 
       val currentSequence = new StringBuilder
 
@@ -172,10 +171,34 @@ case object fasta {
 
       }
 
-      collection.immutable.HashMap(
-        header.label   -> currentHeader,
-        sequence.label -> currentSequence.toString
+      if (currentHeader.isEmpty || currentSequence.isEmpty) None
+      else Some(
+        collection.immutable.HashMap(
+          header.label   -> currentHeader,
+          sequence.label -> currentSequence.toString
+        )
       )
+    }
+
+
+    // this stores the current "next" map
+    var currentMap: Option[Map[String, String]] = None
+
+    // if you do hasNext twice, it won't call evalNext again
+    var hasBeenChecked: Boolean = false
+
+    // now the Interator methods:
+    def hasNext = {
+      if (!hasBeenChecked) {
+        currentMap = evalNext
+        hasBeenChecked = true
+      }
+      currentMap.nonEmpty
+    }
+
+    def next: Map[String, String] = {
+      hasBeenChecked = false
+      currentMap.get
     }
   }
 
