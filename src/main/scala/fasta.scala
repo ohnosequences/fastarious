@@ -136,7 +136,7 @@ case object fasta {
     // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
     def hasNext = lines.hasNext
 
-    var previousHeader: String = ""
+    var currentHeader: String = ""
     var nextHeader: String = ""
 
     def next() = {
@@ -155,13 +155,13 @@ case object fasta {
 
             if(nextHeader.isEmpty) {
               // if it's the first header we've encountered
-              previousHeader = currentLine
+              currentHeader = currentLine
             } else {
               // otherwise what was "next", became previous
-              previousHeader = nextHeader
+              currentHeader = nextHeader
+              nextHeader = currentLine
             }
 
-            nextHeader = currentLine
             break
 
           // otherwise we continue to accumulate the sequence
@@ -173,8 +173,9 @@ case object fasta {
       }
 
       collection.immutable.HashMap(
-        header.label   -> previousHeader,
+        header.label   -> currentHeader,
         sequence.label -> currentSequence.toString
+      )
     }
   }
 
