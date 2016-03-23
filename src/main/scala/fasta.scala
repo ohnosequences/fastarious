@@ -136,31 +136,45 @@ case object fasta {
     // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
     def hasNext = lines.hasNext
 
-    var isFirst: Boolean = true
-    var currentHeader: String = ""
+    var previousHeader: String = ""
+    var nextHeader: String = ""
 
-    def next = {
+    def next() = {
 
-      val currentLines = new StringBuilder
-      if(isFirst) { isFirst = false; currentHeader = lines.next }
+      val currentSequence = new StringBuilder
 
       import util.control.Breaks._
 
       breakable {
+
         while (lines.hasNext) {
-          val line = lines.next
-          if(sequence is line)
-            currentLines append line
-          else {
-            currentHeader = line; break
+          val currentLine = lines.next
+
+          // if we read a header, it's either the first one, or we got a whole read
+          if (header is currentLine) {
+
+            if(nextHeader.isEmpty) {
+              // if it's the first header we've encountered
+              previousHeader = currentLine
+            } else {
+              // otherwise what was "next", became previous
+              previousHeader = nextHeader
+            }
+
+            nextHeader = currentLine
+            break
+
+          // otherwise we continue to accumulate the sequence
+          } else {
+            currentSequence append currentLine
           }
         }
+
       }
 
       collection.immutable.HashMap(
-        header.label    -> currentHeader,
-        sequence.label  -> currentLines.toString
-      )
+        header.label   -> previousHeader,
+        sequence.label -> currentSequence.toString
     }
   }
 
