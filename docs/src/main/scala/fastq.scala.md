@@ -18,16 +18,51 @@ case object fastq {
     id        :×:
     sequence  :×:
     plus      :×:
-    quality   :×: |[AnyType]
+    quality   :×:
+    |[AnyType]
   )
   {
-    implicit def fastqOps[RV <: FASTQ.Raw](fq: FASTQ.type := RV): FASTQOps[RV] = FASTQOps(fq.value)
+
+    type RealRaw =
+      (id.type        := id.Raw)        ::
+      (sequence.type  := sequence.Raw)  ::
+      (plus.type      := plus.Raw)      ::
+      (quality.type   := quality.Raw)   ::
+      *[AnyDenotation]
+
+    type Value = FASTQ := RealRaw
+
+    implicit def fastqOps(fq: Value): FASTQOps = FASTQOps(fq)
+
+    import better.files.File
+    implicit class FASTQIteratorOps(val fastqs: Iterator[Value]) extends AnyVal {
+
+      def appendTo(file: File) = {
+
+        import java.io._
+        val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+
+        fastqs.foreach { fq => { wr.write( fq.asString ); wr.newLine } }
+
+        wr.close
+      }
+    }
   }
 
   implicit lazy val idSerializer =
     new DenotationSerializer(id, id.label)({ v: FastqId => Some(v asString) })
   implicit lazy val idParser =
     new DenotationParser(id, id.label)({ v: String => Some(FastqId(v)) })
+
+  implicit lazy val sequenceSerializer =
+    new DenotationSerializer(sequence, sequence.label)({ v: FastqSequence => Some(v asString) })
+  implicit lazy val sequenceParser =
+    new DenotationParser(sequence, sequence.label)({ v: String => Some(FastqSequence(v)) })
+
+  implicit lazy val qualitySerializer =
+    new DenotationSerializer(quality, quality.label)({ v: FastqQuality => Some(v asString) })
+  implicit lazy val qualityParser =
+    new DenotationParser(quality, quality.label)({ v: String => Some(FastqQuality(v)) })
 
   implicit lazy val plusSerializer =
     new DenotationSerializer(plus, plus.label)({ v: FastqPlus => Some(v asString) })
@@ -44,7 +79,7 @@ case object fastq {
     }
   }
   // the value here is assumed (and guaranteed) to be '@'-free
-  final class FastqId private[fastarious](val value: String) extends AnyVal {
+  final class FastqId private[fastarious] (val value: String) extends AnyVal {
 
     def toFastaHeader: FastaHeader =
       new FastaHeader(value)
@@ -73,7 +108,7 @@ case object fastq {
     }
   }
   // the value here is assumed (and guaranteed) to be '@'-free
-  final class FastqPlus private[fastarious](val value: String) extends AnyVal {
+  final class FastqPlus private[fastarious] (val value: String) extends AnyVal {
 
     def asString: String =
       s"${plus.start}${value}"
@@ -89,35 +124,65 @@ case object fastq {
     def asString = value
   }
 
-  case class FASTQOps[RV <: FASTQ.Raw](val seq: RV) extends AnyVal {
+  case class FASTQOps(val seq: FASTQ.Value) extends AnyVal {
 
-    @inline private def me: FASTQ := RV =
-      FASTQ(seq)
-
-    def toFASTA(implicit
-      getId: AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
-      getSeq: AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw }
+    def toFASTA: FASTA.Value = FASTA(
+      fasta.header( seq.getV(id).toFastaHeader )                   ::
+      fasta.sequence( FastaSequence(seq.getV(sequence).asString) ) :: *[AnyDenotation]
     )
-    : FASTA := ((fasta.header.type := fasta.header.Raw) :: (fasta.sequence.type := fasta.sequence.Raw) :: *[AnyDenotation]) =
-      FASTA(
-        fasta.header( me.getV(id) toFastaHeader )                  ::
-        fasta.sequence( FastaSequence((me getV sequence).asString) )  :: *[AnyDenotation]
-      )
 
-    def toLines(implicit
-      getId: AnyApp1At[findS[AnyDenotation.Of[id.type]], RV] { type Y = id.type := id.Raw },
-      getSeq: AnyApp1At[findS[AnyDenotation.Of[sequence.type]], RV] { type Y = sequence.type := sequence.Raw },
-      getPlus: AnyApp1At[findS[AnyDenotation.Of[plus.type]],RV] { type Y = plus.type := plus.Raw },
-      getQual: AnyApp1At[findS[AnyDenotation.Of[quality.type]],RV] { type Y = quality.type := quality.Raw }
-    )
-    : Seq[String] =
-      Seq(
-        (me getV id)       .asString,
-        (me getV sequence) .asString,
-        (me getV plus)     .asString,
-        (me getV quality)  .asString
-      )
+    def asString: String =
+      (
+        seq.getV(id).asString                 ::
+        seq.getV(sequence).asString            ::
+        seq.getV(plus).asString       ::
+        seq.getV(quality).asString  ::
+        Nil
+      ).mkString("\n")
   }
+
+  def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = {
+
+    // NOTE much unsafe, should check for id and qual chars etc
+    lines.grouped(4) map {
+      quartet => {
+        Map(
+          id.label        -> quartet(0),
+          sequence.label  -> quartet(1),
+          plus.label      -> quartet(2),
+          quality.label   -> quartet(3)
+        )
+      }
+    }
+  }
+
+  def parseFastq(lines: Iterator[String])
+  : Iterator[
+      Either[
+        ParseDenotationsError,
+        FASTQ.type := (
+          (id.type        := id.Raw)        ::
+          (sequence.type  := sequence.Raw)  ::
+          (plus.type      := plus.Raw)      ::
+          (quality.type   := quality.Raw)   ::
+          *[AnyDenotation]
+        )
+      ]
+    ]
+  = parseMap(lines) map { strMap => FASTQ parse strMap }
+
+  def parseFastqDropErrors(lines: Iterator[String])
+  : Iterator[
+      FASTQ.type := (
+        (id.type        := id.Raw)        ::
+        (sequence.type  := sequence.Raw)  ::
+        (plus.type      := plus.Raw)      ::
+        (quality.type   := quality.Raw)   ::
+        *[AnyDenotation]
+      )
+    ]
+  = parseFastq(lines) collect { case Right(fq) => fq }
+
 }
 
 ```
@@ -125,10 +190,10 @@ case object fastq {
 
 
 
-[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
-[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
-[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
-[main/scala/utils.scala]: utils.scala.md
 [main/scala/ncbiHeaders.scala]: ncbiHeaders.scala.md
+[main/scala/utils.scala]: utils.scala.md
+[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
+[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
+[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
