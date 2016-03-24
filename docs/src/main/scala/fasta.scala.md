@@ -214,10 +214,10 @@ Exactly the same as `parseMapFromLines`, but returning either a parsing error or
 
 
 
+[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
+[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
+[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
-[main/scala/ncbiHeaders.scala]: ncbiHeaders.scala.md
 [main/scala/utils.scala]: utils.scala.md
-[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
-[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
-[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
+[main/scala/ncbiHeaders.scala]: ncbiHeaders.scala.md
