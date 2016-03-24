@@ -6,11 +6,12 @@ description   := "fastarious project"
 
 bucketSuffix  := "era7.com"
 
+scalaVersion := "2.11.8"
+
 libraryDependencies ++= Seq(
   "ohnosequences"         %% "cosas"        % "0.8.0",
   "com.github.pathikrit"  %% "better-files" % "2.13.0",
-
-  "org.scalatest"         %% "scalatest"    % "2.2.5"   % Test
+  "org.scalatest"         %% "scalatest"    % "2.2.6"   % Test
 )
 
 wartremoverExcluded ++= Seq(

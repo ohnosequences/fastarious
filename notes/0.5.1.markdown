@@ -1,0 +1,1 @@
+Fixed the FASTA parsing bug, covered more corner cases. See #14.
