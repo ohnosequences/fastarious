@@ -109,6 +109,7 @@ case object fasta {
     )
 
     def asString: String = toMap.values.mkString("\n")
+    def lines: Seq[String] =(fa getV header).toString :: (fa getV sequence).value.grouped(70).toList
   }
 
   /*
