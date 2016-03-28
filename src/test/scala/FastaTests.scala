@@ -157,36 +157,25 @@ class FastaTests extends FunSuite {
         List(fasta1)
     }
 
-    // NOTE fails
-    // assert {
-    //   fasta.parseFastaDropErrors( (emptyFasta.lines ++ fasta1.lines).iterator ).toList ==
-    //     List(emptyFasta, fasta1)
-    // }
-
-    println {
-      emptyFasta.lines ++ fasta1.lines
+    assert {
+      fasta.parseFastaDropErrors( emptyFasta.lines.iterator ).toList ==
+        List(emptyFasta)
+    }
+    // NOTE fails; why?
+    assert {
+      fasta.parseFastaDropErrors( (fasta1.lines ++ emptyFasta.lines).iterator ).toList ==
+        List(fasta1, emptyFasta)
     }
 
-    // NOTE fails
-    // assert {
-    //   fasta.parseFastaDropErrors( (fasta1.lines ++ emptyFasta.lines).iterator ).toList ==
-    //     List(emptyFasta, fasta1)
-    // }
-
-    // NOTE is here for debugging
-    val it = List(fasta1,fasta2).flatMap(_.lines).iterator
-    it foreach { println(_) }
-
-    // NOTE fails, duplicates the first header
-    // assert {
-    //   fasta.parseFastaDropErrors(List(fasta1,fasta2).flatMap(_.lines).iterator).toList ==
-    //     List(fasta1,fasta2)
-    // }
+    assert {
+      fasta.parseFastaDropErrors(List(fasta1,fasta2).flatMap(_.lines).iterator).toList ==
+        List(fasta1,fasta2)
+    }
 
     // NOTE fails too
-    // assert {
-    //   fasta.parseFastaDropErrors(List(fasta2,fasta2,fasta1).flatMap(_.lines).iterator).toList ==
-    //     List(fasta2,fasta2,fasta1)
-    // }
+    assert {
+      fasta.parseFastaDropErrors(List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator).toList ==
+        List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1)
+    }
   }
 }

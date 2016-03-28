@@ -135,44 +135,80 @@ case object fasta {
   final def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
 
     // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
-    var currentHeader: String = ""
-    var nextHeader: String = ""
+
+    // Iterator state
+    var currentHeader : String = ""
+    var nextHeader    : String = ""
+    // this stores the current "next" map
+    var currentMap: Option[Map[String, String]] = None
+    // if you do hasNext twice, it won't call evalNext again
+    var hasBeenChecked: Boolean = false
+    var isFirst: Boolean = true
 
     // this tries to parse one read
-    def evalNext: Option[Map[String, String]] = {
+    private def evalNext: Option[Map[String, String]] = {
 
       val currentSequence = new StringBuilder
-
       import util.control.Breaks._
+        // >1 hola
+        // ATCACCCACTTTACATTTCACACACCCCTTTACAC
+        // >2 hola
+        // ATATACCCACACCCCGGTCAT
 
-      breakable {
+      var foundHeader = false
+      // first time: find a header, and accumulate seq til you find another header
+      if (isFirst) {
 
-        while (lines.hasNext) {
+        while (lines.hasNext && nextHeader.isEmpty) {
+
           val currentLine = lines.next
 
-          // if we read a header, it's either the first one, or we got a whole read
           if (header is currentLine) {
 
-            if(nextHeader.isEmpty) {
-              // if it's the first header we've encountered
+            if(!foundHeader) {
+              println { s"First header; setting currentHeader to ${currentLine}" }
+              println { s"As a consequence, foundHeader is true" }
               currentHeader = currentLine
-            } else {
-              // otherwise what was "next", became previous
-              currentHeader = nextHeader
+              foundHeader   = true
             }
-
-            nextHeader = currentLine
-            if (currentSequence.nonEmpty) break
-
-          // otherwise we continue to accumulate the sequence
-          } else if(currentHeader.nonEmpty) {
+            else {
+              nextHeader = currentLine
+            }
+          }
+          else if (currentHeader.nonEmpty) {
             currentSequence append currentLine
           }
         }
 
+        isFirst = false
+      }
+      // after isFirst we have
+      // foundHeader = true
+      // isFirst = false
+      // nextHeader (if there is) = the right thing
+      // currentHeader = the right thing too
+      else if(nextHeader.nonEmpty) {
+
+        // evaluating it again means that we are already in the next one
+        currentHeader = nextHeader
+        foundHeader = false
+
+        while (lines.hasNext && !foundHeader) {
+
+          val currentLine = lines.next
+
+          if (header is currentLine) {
+
+            foundHeader = true
+            nextHeader  = currentLine
+          }
+          else {
+            currentSequence append currentLine
+          }
+        }
       }
 
-      if (currentHeader.isEmpty || currentSequence.isEmpty) None
+      if (currentHeader.isEmpty) None
       else Some(
         collection.immutable.HashMap(
           header.label   -> currentHeader,
@@ -181,26 +217,11 @@ case object fasta {
       )
     }
 
+    // now the Iterator methods:
+    def hasNext = if(hasBeenChecked) currentMap.nonEmpty else
+      if(!lines.hasNext) false else { currentMap = evalNext; currentMap.nonEmpty }
 
-    // this stores the current "next" map
-    var currentMap: Option[Map[String, String]] = None
-
-    // if you do hasNext twice, it won't call evalNext again
-    var hasBeenChecked: Boolean = false
-
-    // now the Interator methods:
-    def hasNext = {
-      if (!hasBeenChecked) {
-        currentMap = evalNext
-        hasBeenChecked = true
-      }
-      currentMap.nonEmpty
-    }
-
-    def next: Map[String, String] = {
-      hasBeenChecked = false
-      currentMap.get
-    }
+    def next: Map[String, String] = { hasBeenChecked = false; currentMap.get }
   }
 
   /*
