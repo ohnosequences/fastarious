@@ -143,9 +143,8 @@ case object fasta {
     var currentMap: Option[Map[String, String]] = None
     // if you do hasNext twice, it won't call evalNext again
     var hasBeenChecked: Boolean = false
-    var isFirst: Boolean = true
+    var isFirst       : Boolean = true
 
-    // this tries to parse one read
     private def evalNext: Option[Map[String, String]] = {
 
       val currentSequence = new StringBuilder
