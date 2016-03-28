@@ -117,6 +117,7 @@ The `FASTA` record is what you use for sane interaction with fasta elements.
     )
 
     def asString: String = toMap.values.mkString("\n")
+    def lines: Seq[String] =(fa getV header).toString :: (fa getV sequence).value.grouped(70).toList
   }
 ```
 
@@ -148,33 +149,97 @@ This method returns an iterator over `Map[String, String]` which can be directly
   final def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
 
     // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
-    def hasNext = lines.hasNext
 
-    var isFirst: Boolean = true
-    var currentHeader: String = ""
+    // Iterator state
+    var currentHeader : String = ""
+    var nextHeader    : String = ""
+    // this stores the current "next" map
+    var currentMap: Option[Map[String, String]] = None
+    // if you do hasNext twice, it won't call evalNext again
+    var hasBeenChecked: Boolean = false
+    var isFirst       : Boolean = true
 
-    def next = {
+    private def evalNext: Option[Map[String, String]] = {
 
-      val currentLines = new StringBuilder
-      if(isFirst) { isFirst = false; currentHeader = lines.next }
+      val currentSequence = new StringBuilder
 
-      import util.control.Breaks._
+      var foundHeader = false
+      // first time: find a header, and accumulate seq til you find another header
+      if (isFirst) {
 
-      breakable {
-        while (lines.hasNext) {
-          val line = lines.next
-          if(sequence is line)
-            currentLines append line
+        while (lines.hasNext && nextHeader.isEmpty) {
+
+          val currentLine = lines.next
+
+          if (header is currentLine) {
+
+            if(!foundHeader) {
+              currentHeader = currentLine
+              foundHeader   = true
+            }
+            else {
+              nextHeader = currentLine
+            }
+          }
+          else if (currentHeader.nonEmpty) {
+            currentSequence append currentLine
+          }
+        }
+
+        isFirst = false
+      }
+      else if(nextHeader.nonEmpty) {
+
+        currentHeader = nextHeader
+        nextHeader    = ""
+        foundHeader   = false
+
+        while (lines.hasNext && !foundHeader) {
+
+          val currentLine = lines.next
+
+          if (header is currentLine) {
+
+            foundHeader = true
+            nextHeader  = currentLine
+          }
           else {
-            currentHeader = line; break
+            currentSequence append currentLine
           }
         }
       }
 
-      collection.immutable.HashMap(
-        header.label    -> currentHeader,
-        sequence.label  -> currentLines.toString
-      )
+      if (currentHeader.isEmpty) {
+        None
+      }
+      else {
+        val tmpMap = Some(
+          collection.immutable.HashMap(
+            header.label   -> currentHeader,
+            sequence.label -> currentSequence.toString
+          )
+        )
+        // THIS IS IMPORTANT
+        currentHeader = ""
+        tmpMap
+      }
+    }
+
+    // now the Iterator methods:
+    def hasNext = if(hasBeenChecked) {
+      currentMap.nonEmpty
+    }
+    else {
+      currentMap = evalNext;
+      currentMap.nonEmpty
+    }
+
+    def next: Map[String, String] = {
+
+      hasBeenChecked = false;
+      val tmpMap = currentMap.get
+      currentMap = None
+      tmpMap
     }
   }
 ```
