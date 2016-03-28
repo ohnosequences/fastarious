@@ -125,6 +125,66 @@ class FastaTests extends FunSuite {
         parsedFile.appendLines(map("sequence").grouped(70).mkString("\n"))
       }
     }
+  }
 
+  test("FASTA lines parsing") {
+
+    val crap = Seq(
+      "hola fasta! lalala",
+      "oh no, no soy fasta"
+    )
+
+    val fasta1 = FASTA(
+      header(FastaHeader(">1 hola")) ::
+      sequence(FastaSequence("ATCACCCACTTTACATTTCACACACCCCTTTACAC")) ::
+      *[AnyDenotation]
+    )
+
+    val fasta2 = FASTA(
+      header(FastaHeader(">2 hola")) ::
+      sequence(FastaSequence("ATATACCCACACCCCGGTCAT")) ::
+      *[AnyDenotation]
+    )
+
+    val emptyFasta = FASTA(
+      header(FastaHeader(">3 nothing")) ::
+      sequence(FastaSequence("")) ::
+      *[AnyDenotation]
+    )
+
+    assert {
+      fasta.parseFastaDropErrors( (crap ++ fasta1.lines).iterator ).toList ==
+        List(fasta1)
+    }
+
+    assert {
+      fasta.parseFastaDropErrors( (crap ++ emptyFasta.lines ++ fasta1.lines).iterator ).toList ==
+        List(emptyFasta, fasta1)
+    }
+
+    assert {
+      fasta.parseFastaDropErrors( emptyFasta.lines.iterator ).toList ==
+        List(emptyFasta)
+    }
+
+    assert {
+      fasta.parseFastaDropErrors( (fasta1.lines ++ emptyFasta.lines).iterator ).toList ==
+        List(fasta1, emptyFasta)
+    }
+
+    assert {
+      fasta.parseFastaDropErrors(List(fasta1,fasta2).flatMap(_.lines).iterator).toList ==
+        List(fasta1,fasta2)
+    }
+
+    assert {
+      fasta.parseFastaDropErrors(List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator).toList ==
+        List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1)
+    }
+
+    assert {
+      fasta.parseFastaDropErrors(List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta).flatMap(_.lines).iterator).toList ==
+        List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta)
+    }
   }
 }
