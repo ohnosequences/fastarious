@@ -158,10 +158,15 @@ class FastaTests extends FunSuite {
     }
 
     assert {
+      fasta.parseFastaDropErrors( (crap ++ emptyFasta.lines ++ fasta1.lines).iterator ).toList ==
+        List(emptyFasta, fasta1)
+    }
+
+    assert {
       fasta.parseFastaDropErrors( emptyFasta.lines.iterator ).toList ==
         List(emptyFasta)
     }
-    // NOTE fails; why?
+
     assert {
       fasta.parseFastaDropErrors( (fasta1.lines ++ emptyFasta.lines).iterator ).toList ==
         List(fasta1, emptyFasta)
@@ -172,10 +177,14 @@ class FastaTests extends FunSuite {
         List(fasta1,fasta2)
     }
 
-    // NOTE fails too
     assert {
       fasta.parseFastaDropErrors(List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator).toList ==
         List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1)
+    }
+
+    assert {
+      fasta.parseFastaDropErrors(List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta).flatMap(_.lines).iterator).toList ==
+        List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta)
     }
   }
 }

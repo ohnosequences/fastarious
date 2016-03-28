@@ -149,11 +149,6 @@ case object fasta {
     private def evalNext: Option[Map[String, String]] = {
 
       val currentSequence = new StringBuilder
-      import util.control.Breaks._
-        // >1 hola
-        // ATCACCCACTTTACATTTCACACACCCCTTTACAC
-        // >2 hola
-        // ATATACCCACACCCCGGTCAT
 
       var foundHeader = false
       // first time: find a header, and accumulate seq til you find another header
@@ -166,8 +161,6 @@ case object fasta {
           if (header is currentLine) {
 
             if(!foundHeader) {
-              println { s"First header; setting currentHeader to ${currentLine}" }
-              println { s"As a consequence, foundHeader is true" }
               currentHeader = currentLine
               foundHeader   = true
             }
@@ -182,16 +175,11 @@ case object fasta {
 
         isFirst = false
       }
-      // after isFirst we have
-      // foundHeader = true
-      // isFirst = false
-      // nextHeader (if there is) = the right thing
-      // currentHeader = the right thing too
       else if(nextHeader.nonEmpty) {
 
-        // evaluating it again means that we are already in the next one
         currentHeader = nextHeader
-        foundHeader = false
+        nextHeader    = ""
+        foundHeader   = false
 
         while (lines.hasNext && !foundHeader) {
 
@@ -208,20 +196,38 @@ case object fasta {
         }
       }
 
-      if (currentHeader.isEmpty) None
-      else Some(
-        collection.immutable.HashMap(
-          header.label   -> currentHeader,
-          sequence.label -> currentSequence.toString
+      if (currentHeader.isEmpty) {
+        None
+      }
+      else {
+        val tmpMap = Some(
+          collection.immutable.HashMap(
+            header.label   -> currentHeader,
+            sequence.label -> currentSequence.toString
+          )
         )
-      )
+        // THIS IS IMPORTANT
+        currentHeader = ""
+        tmpMap
+      }
     }
 
     // now the Iterator methods:
-    def hasNext = if(hasBeenChecked) currentMap.nonEmpty else
-      if(!lines.hasNext) false else { currentMap = evalNext; currentMap.nonEmpty }
+    def hasNext = if(hasBeenChecked) {
+      currentMap.nonEmpty
+    }
+    else {
+      currentMap = evalNext;
+      currentMap.nonEmpty
+    }
 
-    def next: Map[String, String] = { hasBeenChecked = false; currentMap.get }
+    def next: Map[String, String] = {
+
+      hasBeenChecked = false;
+      val tmpMap = currentMap.get
+      currentMap = None
+      tmpMap
+    }
   }
 
   /*
