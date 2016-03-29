@@ -8,8 +8,10 @@ import ohnosequences.fastarious._, fasta._, ncbiHeaders._
 class NcbiHeadersTests extends FunSuite {
 
   val randomIds = ncbiHeader(
-    gb(accession("A3CFTC4.4", "X4CC8HG"))           ::
-    gi(21312324)                                    ::
+    id("1AC3438D")                                  ::
+    lcl("db.rna16s")                                ::
+    gb(Some(accession("A3CFTC4.4", "X4CC8HG")))     ::
+    gi(Some(21312324))                              ::
     name("A really interesting sequence hola hola") ::
     *[AnyDenotation]
   )
@@ -17,6 +19,8 @@ class NcbiHeadersTests extends FunSuite {
   test("can construct a header string from an ncbi record value") {
 
     val a1 = randomIds.asFastaHeader.value.toString
+    assert { a1 == ">1AC3438D|lcl|db.rna16s|gb|A3CFTC4.4|X4CC8HG|gi|21312324 A really interesting sequence hola hola" }
+
     val a2 = randomIds.asFastqId.value.asString
   }
 
