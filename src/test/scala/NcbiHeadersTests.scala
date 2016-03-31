@@ -8,11 +8,20 @@ import ohnosequences.fastarious._, fasta._, ncbiHeaders._
 class NcbiHeadersTests extends FunSuite {
 
   val randomIds = ncbiHeader(
-    id("1AC3438D")                                  ::
-    lcl("db.rna16s")                                ::
-    gb(Some(accession("A3CFTC4.4", "X4CC8HG")))     ::
-    gi(Some(21312324))                              ::
-    name("A really interesting sequence hola hola") ::
+    id("1AC3438D")                                        ::
+    lcl(Some("db.rna16s"))                                ::
+    gb(Some(accession("A3CFTC4.4", "X4CC8HG")))           ::
+    gi(Some(21312324))                                    ::
+    name(Some("A really interesting sequence hola hola")) ::
+    *[AnyDenotation]
+  )
+
+  val someMissingFields = ncbiHeader(
+    id("1AC3438D")                              ::
+    lcl(None)                                   ::
+    gb(Some(accession("A3CFTC4.4", "X4CC8HG"))) ::
+    gi(None)                                    ::
+    name(Some("cosas de la vida"))              ::
     *[AnyDenotation]
   )
 
@@ -21,7 +30,9 @@ class NcbiHeadersTests extends FunSuite {
     val a1 = randomIds.asFastaHeader.value.toString
     assert { a1 == ">1AC3438D|lcl|db.rna16s|gb|A3CFTC4.4|X4CC8HG|gi|21312324 A really interesting sequence hola hola" }
 
-    val a2 = randomIds.asFastqId.value.asString
+    assert {
+      someMissingFields.asFastaHeader == (fasta.header := FastaHeader("1AC3438D|gb|A3CFTC4.4|X4CC8HG cosas de la vida"))
+    }
   }
 
   test("ncbi ids example use") {
@@ -40,8 +51,8 @@ class NcbiHeadersTests extends FunSuite {
     """
 
     val fa = FASTA(
-      randomIds.asFastaHeader   ::
-      sequence(FastaSequence(seq)) ::
+      randomIds.asFastaHeader       ::
+      sequence(FastaSequence(seq))  ::
       *[AnyDenotation]
     )
   }
