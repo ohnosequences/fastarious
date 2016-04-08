@@ -16,46 +16,63 @@ case object ncbiHeaders {
 
   trait NcbiID extends AnyType
   // TODO add the rest of ids here
-  case object gi    extends Type[Int]("gi") with NcbiID
-  case object gb    extends Type[accession]("gb") with NcbiID
+  case object id    extends Type[String]("")              with NcbiID
+  case object lcl   extends Type[Option[String]]("lcl")   with NcbiID
+  case object gi    extends Type[Option[Int]]("gi")       with NcbiID
+  case object gb    extends Type[Option[accession]]("gb") with NcbiID
   /* this field corresponds to the name that is normally at the end, with spaces and all that */
-  case object name  extends Type[String]("") with NcbiID
+  case object name  extends Type[Option[String]]("")              with NcbiID
 
-  class accession(val acc: String, val locus: String) {
+  case class accession(val acc: String, val locus: String) {
 
-    override def toString: String = s"${acc}|${locus}"
-  }
-
-  case object accession {
-
-    def apply(acc: String, locus: String): accession = new accession(acc,locus)
+    def asString: String = s"${acc}|${locus}"
   }
 
   // NOTE the order is important in this record
-  case object ncbiHeader extends RecordType(gb :×: gi :×: name :×: |[AnyType]) {
+  case object ncbiHeader extends RecordType(
+    id    :×:
+    lcl   :×:
+    gb    :×:
+    gi    :×:
+    name  :×:
+    |[AnyType]
+  ){
 
     // we do need better records :(
-    type RealRaw = (gb.type := gb.Raw) :: (gi.type := gi.Raw) :: (name.type := name.Raw) :: *[AnyDenotation]
+    type RealRaw =
+      (id.type    := id.Raw)   ::
+      (lcl.type   := lcl.Raw)  ::
+      (gb.type    := gb.Raw)   ::
+      (gi.type    := gi.Raw)   ::
+      (name.type  := name.Raw) ::
+      *[AnyDenotation]
 
-    implicit def buh(v: ncbiHeader.type := ncbiHeader.RealRaw): ncbiHeaderOps = ncbiHeaderOps(v.value)
+    implicit def ncbiHeaderOps(v: ncbiHeader.type := ncbiHeader.RealRaw): NcbiHeaderOps = NcbiHeaderOps(v.value)
   }
 
   case object toHeader extends DepFn1[Any,String] {
 
     // first one, no need to add a '|'
-    implicit val atFirst: AnyApp1At[toHeader.type, gb.type := accession] { type Y = String } =
-      toHeader at { iv => s"${iv.tpe.label}|${utils.removeAllSpace(iv.value.toString)}" }
+    implicit val atFirst: AnyApp1At[toHeader.type, id.type := String] { type Y = String } =
+      toHeader at { iv => utils.removeAllSpace(iv.value) }
 
     // for all the others, add '|' first
-    implicit def default[I <: NcbiID, V <: I#Raw]: AnyApp1At[toHeader.type, I := V] { type Y = String } =
-      toHeader at { iv: I := V => s"|${iv.tpe.label}|${utils.removeAllSpace(iv.value.toString)}" }
+    implicit def default[I <: NcbiID { type Raw = Option[String] }]: AnyApp1At[toHeader.type, I := Option[String]] { type Y = String } =
+      toHeader at {
+        iv => iv.value.fold("")(v => s"|${iv.tpe.label}|${utils.removeAllSpace(v)}")
+      }
+    implicit val atGB: AnyApp1At[toHeader.type, gb.type := gb.Raw] { type Y = String } =
+      toHeader at { u => u.value.fold("")(v => s"|${u.tpe.label}|${v.asString}") }
 
-    // but for 'name', which just needs a space I don't know why
-    implicit val atName: AnyApp1At[toHeader.type, name.type := String] { type Y = String } =
-      toHeader at { u => s" ${u.value}" }
+    implicit val atGI: AnyApp1At[toHeader.type, gi.type := gi.Raw] { type Y = String } =
+      toHeader at { u => u.value.fold("")( v => s"|${u.tpe.label}|${v.toString}") }
+
+    // but for 'name', which just needs a space
+    implicit val atName: AnyApp1At[toHeader.type, name.type := Option[String]] { type Y = String } =
+      toHeader at { u => s"${u.value.fold("")(v => s" ${v.trim}")}" }
   }
 
-  case class ncbiHeaderOps(v: ncbiHeader.RealRaw) extends AnyVal {
+  case class NcbiHeaderOps(v: ncbiHeader.RealRaw) extends AnyVal {
 
     def asFastaHeader: fasta.header.type := fasta.FastaHeader =
       fasta.header(fasta.FastaHeader( v.map(toHeader).asList.mkString("") ))
