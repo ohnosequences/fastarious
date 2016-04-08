@@ -81,6 +81,7 @@ case object fasta {
     override def toString: String = s"${header.start}${value}"
 
     final def id: String = value.takeWhile(_ != ' ')
+    /* Note that description will keep the initial empty space, so that `value == s"${id}${description}"` */
     final def description: String = value.stripPrefix(id)
   }
 
