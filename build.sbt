@@ -1,22 +1,17 @@
-Nice.scalaProject
-
 name          := "fastarious"
 organization  := "ohnosequences"
 description   := "fastarious project"
 
 bucketSuffix  := "era7.com"
 
-scalaVersion := "2.11.8"
-
 libraryDependencies ++= Seq(
   "ohnosequences"         %% "cosas"        % "0.8.0",
-  "com.github.pathikrit"  %% "better-files" % "2.13.0",
-  "org.scalatest"         %% "scalatest"    % "2.2.6"   % Test
+  "com.github.pathikrit"  %% "better-files" % "2.16.0"
 )
 
-wartremoverExcluded ++= Seq(
-  baseDirectory.value/"src"/"main"/"scala"/"fasta.scala"
-)
+// NOTE should be reestablished
+wartremoverErrors in (Test, compile) := Seq()
+wartremoverErrors in (Compile, compile) := Seq()
 
 // shows time for each test:
 testOptions in Test += Tests.Argument("-oD")
