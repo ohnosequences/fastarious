@@ -1,7 +1,8 @@
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._, records._, fns._, klists._
 import fasta._
+import ohnosequences.cosas._, types._, records._, fns._, klists._
+import java.io._
 
 case object fastq {
 
@@ -32,13 +33,11 @@ case object fastq {
 
     implicit def fastqOps(fq: Value): FASTQOps = FASTQOps(fq)
 
-    import better.files.File
     implicit class FASTQIteratorOps(val fastqs: Iterator[Value]) extends AnyVal {
 
       def appendTo(file: File) = {
 
-        import java.io._
-        val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+        val wr = new BufferedWriter(new FileWriter(file, true))
 
         fastqs.foreach { fq => { wr.write( fq.asString ); wr.newLine } }
 

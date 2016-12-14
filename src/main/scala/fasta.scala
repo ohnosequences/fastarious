@@ -1,7 +1,7 @@
 package ohnosequences.fastarious
 
 import ohnosequences.cosas._, types._, records._, fns._, klists._
-import better.files._
+import java.io._
 
 /*
   # FASTA
@@ -61,8 +61,7 @@ case object fasta {
 
     def appendTo(file: File) = {
 
-      import java.io._
-      val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+      val wr = new BufferedWriter(new FileWriter(file, true))
 
       fastas.foreach { fa => { wr.write( fa.asString ); wr.newLine } }
 
