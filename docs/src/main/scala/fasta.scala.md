@@ -3,7 +3,7 @@
 package ohnosequences.fastarious
 
 import ohnosequences.cosas._, types._, records._, fns._, klists._
-import better.files._
+import java.io._
 ```
 
 
@@ -69,8 +69,7 @@ The `FASTA` record is what you use for sane interaction with fasta elements.
 
     def appendTo(file: File) = {
 
-      import java.io._
-      val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+      val wr = new BufferedWriter(new FileWriter(file, true))
 
       fastas.foreach { fa => { wr.write( fa.asString ); wr.newLine } }
 
@@ -89,6 +88,11 @@ The `FASTA` record is what you use for sane interaction with fasta elements.
     override def toString: String = s"${header.start}${value}"
 
     final def id: String = value.takeWhile(_ != ' ')
+```
+
+Note that description will keep the initial empty space, so that `value == s"${id}${description}"`
+
+```scala
     final def description: String = value.stripPrefix(id)
   }
 
@@ -250,28 +254,11 @@ Exactly the same as `parseMapFromLines`, but returning either a parsing error or
 
 ```scala
   // TODO update after gettting good Raw in cosas records
-  final def parseFasta(lines: Iterator[String])
-  : Iterator[
-      Either[
-        ParseDenotationsError,
-        FASTA.type := (
-          (header.type := FastaHeader)      ::
-          (sequence.type := FastaSequence)  ::
-          *[AnyDenotation]
-        )
-      ]
-    ]
-  = parseMap(lines) map { strMap => FASTA parse strMap }
+  final def parseFasta(lines: Iterator[String]): Iterator[ Either[ParseDenotationsError, FASTA.Value] ] =
+    parseMap(lines) map { strMap => FASTA parse strMap }
 
-  final def parseFastaDropErrors(lines: Iterator[String])
-  : Iterator[
-      FASTA.type := (
-        (header.type := FastaHeader)      ::
-        (sequence.type := FastaSequence)  ::
-        *[AnyDenotation]
-      )
-    ]
-  = parseFasta(lines) collect { case Right(fa) => fa }
+  final def parseFastaDropErrors(lines: Iterator[String]): Iterator[FASTA.Value] =
+    parseFasta(lines) collect { case Right(fa) => fa }
 }
 
 ```
@@ -279,10 +266,10 @@ Exactly the same as `parseMapFromLines`, but returning either a parsing error or
 
 
 
-[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
-[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
-[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
-[main/scala/utils.scala]: utils.scala.md
 [main/scala/ncbiHeaders.scala]: ncbiHeaders.scala.md
+[main/scala/utils.scala]: utils.scala.md
+[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
+[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
+[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md

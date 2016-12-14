@@ -6,7 +6,9 @@ import org.scalatest.FunSuite
 
 import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fasta._
-import better.files._
+import scala.collection.JavaConversions._
+import java.nio.file._
+import java.io._
 
 
 class FastaTests extends FunSuite {
@@ -74,8 +76,8 @@ class FastaTests extends FunSuite {
 
   test("generate fasta file") {
 
-    val fastaFile = file"test.fasta"
-    fastaFile.clear
+    val fastaFile = new File("test.fasta")
+    Files.deleteIfExists(fastaFile.toPath)
 
     val id = FastaHeader("id|12312312 una secuencia cualquiera")
     val randomLines = FastaSequence("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCCCCCCTTCTACACTCCCCCCCCCCCACATGGTCATTTCTACACACCCCCCCCCCCCCCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGCATCCCTACATATACTTCTCGTCATACTCATACATACACCCCCCCCCCCACAGGGGTCCATACAAAGGGCTTATATCCCCACGGGTCTTTTTCACTTCATATTTTTGGGGGCCTCGCGCGCCCTTAC")
@@ -94,15 +96,14 @@ class FastaTests extends FunSuite {
 
   test("parsing from iterator") {
 
-    val fastaFile   = file"test.fasta"
-    val parsedFile  = file"parsed.fasta"
-    parsedFile.clear
+    val fastaFile   = new File("test.fasta")
+    val parsedFile  = new File("parsed.fasta")
+    Files.deleteIfExists(parsedFile.toPath)
 
-    import java.nio.file._
     import scala.collection.JavaConversions._
 
     // WARNING this will leak file descriptors
-    val lines   = Files.lines(fastaFile.path).iterator
+    val lines   = Files.lines(fastaFile.toPath).iterator
     val asFasta = fasta.parseFastaDropErrors(lines)
 
     asFasta appendTo parsedFile
@@ -110,21 +111,22 @@ class FastaTests extends FunSuite {
 
   test("raw parsing from iterator") {
 
-    val fastaFile   = file"test.fasta"
-    val parsedFile  = file"parsed-raw.fasta"
-    parsedFile.clear
-
-    import java.nio.file._
-    import scala.collection.JavaConversions._
+    val fastaFile   = new File("test.fasta")
+    val parsedFile  = new File("parsed-raw.fasta")
+    Files.deleteIfExists(parsedFile.toPath)
 
     // WARNING this will leak file descriptors
-    val lines   = Files.lines(fastaFile.path).iterator
-    val asMaps  = fasta.parseMap(lines)
+    val lines  = Files.lines(fastaFile.toPath).iterator
+    val asMaps = fasta.parseMap(lines)
+
+    def append(f: File, str: String) = {
+      Files.write(f.toPath, Seq(str), StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+    }
 
     asMaps.foreach {
       map => {
-        parsedFile.appendLines(s">${map("header")}")
-        parsedFile.appendLines(map("sequence").grouped(70).mkString("\n"))
+        append(parsedFile, s">${map("header")}")
+        append(parsedFile, map("sequence").grouped(70).mkString("\n"))
       }
     }
   }
@@ -196,10 +198,10 @@ class FastaTests extends FunSuite {
 
 
 
-[test/scala/NcbiHeadersTests.scala]: NcbiHeadersTests.scala.md
-[test/scala/FastqTests.scala]: FastqTests.scala.md
-[test/scala/FastaTests.scala]: FastaTests.scala.md
 [main/scala/fasta.scala]: ../../main/scala/fasta.scala.md
 [main/scala/fastq.scala]: ../../main/scala/fastq.scala.md
-[main/scala/utils.scala]: ../../main/scala/utils.scala.md
 [main/scala/ncbiHeaders.scala]: ../../main/scala/ncbiHeaders.scala.md
+[main/scala/utils.scala]: ../../main/scala/utils.scala.md
+[test/scala/FastaTests.scala]: FastaTests.scala.md
+[test/scala/FastqTests.scala]: FastqTests.scala.md
+[test/scala/NcbiHeadersTests.scala]: NcbiHeadersTests.scala.md

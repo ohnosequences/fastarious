@@ -6,7 +6,8 @@ import org.scalatest.FunSuite
 
 import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fastq._
-import better.files._
+import java.nio.file.Files
+import java.io._
 
 class FastqTests extends FunSuite {
 
@@ -28,12 +29,12 @@ class FastqTests extends FunSuite {
 
   test("can parse fastq files") {
 
-    val input = file"test.fastq"
+    val input = new File("test.fastq")
 
     import java.nio.file._
     import scala.collection.JavaConversions._
     // WARNING this will leak file descriptors
-    val lines = Files.lines(input.path).iterator
+    val lines = Files.lines(input.toPath).iterator
     val buh = parseFastq(lines)
   }
 
@@ -52,8 +53,8 @@ class FastqTests extends FunSuite {
       *[AnyDenotation]
     )
 
-    val fastqFile = file"test.fastq"
-    fastqFile.clear
+    val fastqFile = new File("test.fastq")
+    Files.deleteIfExists(fastqFile.toPath)
 
     val fastqs = Iterator.fill(10000)(fq)
     fastqs appendTo fastqFile
@@ -61,15 +62,15 @@ class FastqTests extends FunSuite {
 
   test("parsing from iterator") {
 
-    val fastaFile   = file"test.fastq"
-    val parsedFile  = file"parsed.fastq"
-    parsedFile.clear
+    val fastaFile   = new File("test.fastq")
+    val parsedFile  = new File("parsed.fastq")
+    Files.deleteIfExists(parsedFile.toPath)
 
     import java.nio.file._
     import scala.collection.JavaConversions._
 
     // WARNING this will leak file descriptors
-    val lines   = Files.lines(fastaFile.path).iterator
+    val lines   = Files.lines(fastaFile.toPath).iterator
     val asFastq = fastq.parseFastqDropErrors(lines)
 
     asFastq appendTo parsedFile
@@ -83,10 +84,10 @@ class FastqTests extends FunSuite {
 
 
 
-[test/scala/NcbiHeadersTests.scala]: NcbiHeadersTests.scala.md
-[test/scala/FastqTests.scala]: FastqTests.scala.md
-[test/scala/FastaTests.scala]: FastaTests.scala.md
 [main/scala/fasta.scala]: ../../main/scala/fasta.scala.md
 [main/scala/fastq.scala]: ../../main/scala/fastq.scala.md
-[main/scala/utils.scala]: ../../main/scala/utils.scala.md
 [main/scala/ncbiHeaders.scala]: ../../main/scala/ncbiHeaders.scala.md
+[main/scala/utils.scala]: ../../main/scala/utils.scala.md
+[test/scala/FastaTests.scala]: FastaTests.scala.md
+[test/scala/FastqTests.scala]: FastqTests.scala.md
+[test/scala/NcbiHeadersTests.scala]: NcbiHeadersTests.scala.md

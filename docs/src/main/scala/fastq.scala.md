@@ -2,8 +2,9 @@
 ```scala
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._, records._, fns._, klists._
 import fasta._
+import ohnosequences.cosas._, types._, records._, fns._, klists._
+import java.io._
 
 case object fastq {
 
@@ -34,13 +35,11 @@ case object fastq {
 
     implicit def fastqOps(fq: Value): FASTQOps = FASTQOps(fq)
 
-    import better.files.File
     implicit class FASTQIteratorOps(val fastqs: Iterator[Value]) extends AnyVal {
 
       def appendTo(file: File) = {
 
-        import java.io._
-        val wr = new BufferedWriter(new FileWriter(file.toJava, true))
+        val wr = new BufferedWriter(new FileWriter(file, true))
 
         fastqs.foreach { fq => { wr.write( fq.asString ); wr.newLine } }
 
@@ -133,9 +132,9 @@ case object fastq {
 
     def asString: String =
       (
-        seq.getV(id).asString                 ::
-        seq.getV(sequence).asString            ::
-        seq.getV(plus).asString       ::
+        seq.getV(id).asString       ::
+        seq.getV(sequence).asString ::
+        seq.getV(plus).asString     ::
         seq.getV(quality).asString  ::
         Nil
       ).mkString("\n")
@@ -147,41 +146,20 @@ case object fastq {
     lines.grouped(4) map {
       quartet => {
         Map(
-          id.label        -> quartet(0),
-          sequence.label  -> quartet(1),
-          plus.label      -> quartet(2),
-          quality.label   -> quartet(3)
+          id.label       -> quartet(0),
+          sequence.label -> quartet(1),
+          plus.label     -> quartet(2),
+          quality.label  -> quartet(3)
         )
       }
     }
   }
 
-  def parseFastq(lines: Iterator[String])
-  : Iterator[
-      Either[
-        ParseDenotationsError,
-        FASTQ.type := (
-          (id.type        := id.Raw)        ::
-          (sequence.type  := sequence.Raw)  ::
-          (plus.type      := plus.Raw)      ::
-          (quality.type   := quality.Raw)   ::
-          *[AnyDenotation]
-        )
-      ]
-    ]
-  = parseMap(lines) map { strMap => FASTQ parse strMap }
+  def parseFastq(lines: Iterator[String]): Iterator[ Either[ParseDenotationsError, FASTQ.Value] ] =
+    parseMap(lines) map { strMap => FASTQ parse strMap }
 
-  def parseFastqDropErrors(lines: Iterator[String])
-  : Iterator[
-      FASTQ.type := (
-        (id.type        := id.Raw)        ::
-        (sequence.type  := sequence.Raw)  ::
-        (plus.type      := plus.Raw)      ::
-        (quality.type   := quality.Raw)   ::
-        *[AnyDenotation]
-      )
-    ]
-  = parseFastq(lines) collect { case Right(fq) => fq }
+  def parseFastqDropErrors(lines: Iterator[String]): Iterator[FASTQ.Value] =
+    parseFastq(lines) collect { case Right(fq) => fq }
 
 }
 
@@ -190,10 +168,10 @@ case object fastq {
 
 
 
-[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
-[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
-[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
-[main/scala/utils.scala]: utils.scala.md
 [main/scala/ncbiHeaders.scala]: ncbiHeaders.scala.md
+[main/scala/utils.scala]: utils.scala.md
+[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
+[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
+[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
