@@ -233,26 +233,9 @@ case object fasta {
     Exactly the same as `parseMapFromLines`, but returning either a parsing error or a `FASTA` denotation.
   */
   // TODO update after gettting good Raw in cosas records
-  final def parseFasta(lines: Iterator[String])
-  : Iterator[
-      Either[
-        ParseDenotationsError,
-        FASTA.type := (
-          (header.type := FastaHeader)      ::
-          (sequence.type := FastaSequence)  ::
-          *[AnyDenotation]
-        )
-      ]
-    ]
-  = parseMap(lines) map { strMap => FASTA parse strMap }
+  final def parseFasta(lines: Iterator[String]): Iterator[ Either[ParseDenotationsError, FASTA.Value] ] =
+    parseMap(lines) map { strMap => FASTA parse strMap }
 
-  final def parseFastaDropErrors(lines: Iterator[String])
-  : Iterator[
-      FASTA.type := (
-        (header.type := FastaHeader)      ::
-        (sequence.type := FastaSequence)  ::
-        *[AnyDenotation]
-      )
-    ]
-  = parseFasta(lines) collect { case Right(fa) => fa }
+  final def parseFastaDropErrors(lines: Iterator[String]): Iterator[FASTA.Value] =
+    parseFasta(lines) collect { case Right(fa) => fa }
 }

@@ -130,9 +130,9 @@ case object fastq {
 
     def asString: String =
       (
-        seq.getV(id).asString                 ::
-        seq.getV(sequence).asString            ::
-        seq.getV(plus).asString       ::
+        seq.getV(id).asString       ::
+        seq.getV(sequence).asString ::
+        seq.getV(plus).asString     ::
         seq.getV(quality).asString  ::
         Nil
       ).mkString("\n")
@@ -144,40 +144,19 @@ case object fastq {
     lines.grouped(4) map {
       quartet => {
         Map(
-          id.label        -> quartet(0),
-          sequence.label  -> quartet(1),
-          plus.label      -> quartet(2),
-          quality.label   -> quartet(3)
+          id.label       -> quartet(0),
+          sequence.label -> quartet(1),
+          plus.label     -> quartet(2),
+          quality.label  -> quartet(3)
         )
       }
     }
   }
 
-  def parseFastq(lines: Iterator[String])
-  : Iterator[
-      Either[
-        ParseDenotationsError,
-        FASTQ.type := (
-          (id.type        := id.Raw)        ::
-          (sequence.type  := sequence.Raw)  ::
-          (plus.type      := plus.Raw)      ::
-          (quality.type   := quality.Raw)   ::
-          *[AnyDenotation]
-        )
-      ]
-    ]
-  = parseMap(lines) map { strMap => FASTQ parse strMap }
+  def parseFastq(lines: Iterator[String]): Iterator[ Either[ParseDenotationsError, FASTQ.Value] ] =
+    parseMap(lines) map { strMap => FASTQ parse strMap }
 
-  def parseFastqDropErrors(lines: Iterator[String])
-  : Iterator[
-      FASTQ.type := (
-        (id.type        := id.Raw)        ::
-        (sequence.type  := sequence.Raw)  ::
-        (plus.type      := plus.Raw)      ::
-        (quality.type   := quality.Raw)   ::
-        *[AnyDenotation]
-      )
-    ]
-  = parseFastq(lines) collect { case Right(fq) => fq }
+  def parseFastqDropErrors(lines: Iterator[String]): Iterator[FASTQ.Value] =
+    parseFastq(lines) collect { case Right(fq) => fq }
 
 }
