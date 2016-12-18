@@ -131,23 +131,16 @@ case object fasta {
   implicit class BufferedIteratorFASTAOps(val lines: BufferedIterator[String]) extends AnyVal {
 
     /* Similar to `takeWhile`, but the iterator **can be reused** after */
-    private def cutUntil(condition: String => Boolean): Seq[String] = {
-      if (lines.hasNext && !condition(lines.head))
-        lines.next() +: cutUntil(condition)
-      else Seq()
-    }
+    def cutUntil(condition: String => Boolean): Seq[String] = {
 
-    /* You can use this method when you want to parse just one FASTA value and continue using the `lines` iterator as _lines_ */
-    def parseOneFasta(): Either[ParseDenotationsError, FASTA.Value] = {
-      val hdr: String = lines.next()
-      val seq: String = cutUntil(fasta.header.is).mkString
+      @annotation.tailrec
+      def rec(acc: collection.mutable.Buffer[String]): collection.mutable.Buffer[String] = {
+        if (lines.hasNext && !condition(lines.head))
+          rec(acc :+ lines.next())
+        else acc
+      }
 
-      val valueMap = Map[String, String](
-          header.label -> hdr,
-        sequence.label -> seq
-      )
-
-      FASTA parse valueMap
+      rec(collection.mutable.Buffer.empty)
     }
 
     /* Use this method to parse all FASTA values from the `lines` iterator (with possible errors) */
@@ -158,7 +151,17 @@ case object fasta {
       /* If there is one more header, there is one more FASTA value (even if the sequence is empty) */
       def hasNext: Boolean = lines.hasNext && fasta.header.is(lines.head)
 
-      def next(): Either[ParseDenotationsError, FASTA.Value] = parseOneFasta()
+      def next(): Either[ParseDenotationsError, FASTA.Value] = {
+        val hdr: String = lines.next()
+        val seq: String = cutUntil(fasta.header.is).mkString
+
+        val valueMap = Map[String, String](
+            header.label -> hdr,
+          sequence.label -> seq
+        )
+
+        FASTA parse valueMap
+      }
     }
 
     /* This is the same as `parseFasta` dropping all erroneous FASTAs and skipping anything before the first FASTA value */
