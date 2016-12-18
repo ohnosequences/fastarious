@@ -104,31 +104,9 @@ class FastaTests extends FunSuite {
 
     // WARNING this will leak file descriptors
     val lines   = Files.lines(fastaFile.toPath).iterator
-    val asFasta = fasta.parseFastaDropErrors(lines)
+    val asFasta = lines.buffered.parseFastaDropErrors()
 
     asFasta appendTo parsedFile
-  }
-
-  test("raw parsing from iterator") {
-
-    val fastaFile   = new File("test.fasta")
-    val parsedFile  = new File("parsed-raw.fasta")
-    Files.deleteIfExists(parsedFile.toPath)
-
-    // WARNING this will leak file descriptors
-    val lines  = Files.lines(fastaFile.toPath).iterator
-    val asMaps = fasta.parseMap(lines)
-
-    def append(f: File, str: String) = {
-      Files.write(f.toPath, Seq(str), StandardOpenOption.CREATE, StandardOpenOption.APPEND)
-    }
-
-    asMaps.foreach {
-      map => {
-        append(parsedFile, s">${map("header")}")
-        append(parsedFile, map("sequence").grouped(70).mkString("\n"))
-      }
-    }
   }
 
   test("FASTA lines parsing") {
@@ -157,37 +135,37 @@ class FastaTests extends FunSuite {
     )
 
     assert {
-      fasta.parseFastaDropErrors( (crap ++ fasta1.lines).iterator ).toList ==
+      (crap ++ fasta1.lines).iterator.buffered.parseFastaDropErrors().toList ==
         List(fasta1)
     }
 
     assert {
-      fasta.parseFastaDropErrors( (crap ++ emptyFasta.lines ++ fasta1.lines).iterator ).toList ==
+      (crap ++ emptyFasta.lines ++ fasta1.lines).iterator.buffered.parseFastaDropErrors().toList ==
         List(emptyFasta, fasta1)
     }
 
     assert {
-      fasta.parseFastaDropErrors( emptyFasta.lines.iterator ).toList ==
+      emptyFasta.lines.iterator.buffered.parseFastaDropErrors().toList ==
         List(emptyFasta)
     }
 
     assert {
-      fasta.parseFastaDropErrors( (fasta1.lines ++ emptyFasta.lines).iterator ).toList ==
+      (fasta1.lines ++ emptyFasta.lines).iterator.buffered.parseFastaDropErrors().toList ==
         List(fasta1, emptyFasta)
     }
 
     assert {
-      fasta.parseFastaDropErrors(List(fasta1,fasta2).flatMap(_.lines).iterator).toList ==
+      List(fasta1,fasta2).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
         List(fasta1,fasta2)
     }
 
     assert {
-      fasta.parseFastaDropErrors(List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator).toList ==
+      List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
         List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1)
     }
 
     assert {
-      fasta.parseFastaDropErrors(List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta).flatMap(_.lines).iterator).toList ==
+      List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
         List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta)
     }
   }

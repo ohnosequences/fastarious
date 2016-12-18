@@ -143,122 +143,64 @@ These are parser and serializers instances for the `FASTA` record field. They ma
     new DenotationParser(sequence, sequence.label)({ v: String => Some(FastaSequence(v)) })
 ```
 
-
-This method returns an iterator over `Map[String, String]` which can be directly used by `FASTA.parse`.
-
-**NOTE** the `lines` iterator should *not* be used after calling `parseFromLines` on it.
-
+Note, all we only use `next`, `hasNext` and `head` method here, so the `lines` iterator can be used after calling any of these extension methods and can be considered as the parsing "remainder" (i.e. unparsed part)
 
 ```scala
-  final def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = new Iterator[Map[String, String]] {
-
-    // NOTE see https://groups.google.com/forum/#!topic/scala-user/BPjFbrglfMs for why this is that ugly
-
-    // Iterator state
-    var currentHeader : String = ""
-    var nextHeader    : String = ""
-    // this stores the current "next" map
-    var currentMap: Option[Map[String, String]] = None
-    // if you do hasNext twice, it won't call evalNext again
-    var hasBeenChecked: Boolean = false
-    var isFirst       : Boolean = true
-
-    private def evalNext: Option[Map[String, String]] = {
-
-      val currentSequence = new StringBuilder
-
-      var foundHeader = false
-      // first time: find a header, and accumulate seq til you find another header
-      if (isFirst) {
-
-        while (lines.hasNext && nextHeader.isEmpty) {
-
-          val currentLine = lines.next
-
-          if (header is currentLine) {
-
-            if(!foundHeader) {
-              currentHeader = currentLine
-              foundHeader   = true
-            }
-            else {
-              nextHeader = currentLine
-            }
-          }
-          else if (currentHeader.nonEmpty) {
-            currentSequence append currentLine
-          }
-        }
-
-        isFirst = false
-      }
-      else if(nextHeader.nonEmpty) {
-
-        currentHeader = nextHeader
-        nextHeader    = ""
-        foundHeader   = false
-
-        while (lines.hasNext && !foundHeader) {
-
-          val currentLine = lines.next
-
-          if (header is currentLine) {
-
-            foundHeader = true
-            nextHeader  = currentLine
-          }
-          else {
-            currentSequence append currentLine
-          }
-        }
-      }
-
-      if (currentHeader.isEmpty) {
-        None
-      }
-      else {
-        val tmpMap = Some(
-          collection.immutable.HashMap(
-            header.label   -> currentHeader,
-            sequence.label -> currentSequence.toString
-          )
-        )
-        // THIS IS IMPORTANT
-        currentHeader = ""
-        tmpMap
-      }
-    }
-
-    // now the Iterator methods:
-    def hasNext = if(hasBeenChecked) {
-      currentMap.nonEmpty
-    }
-    else {
-      currentMap = evalNext;
-      currentMap.nonEmpty
-    }
-
-    def next: Map[String, String] = {
-
-      hasBeenChecked = false;
-      val tmpMap = currentMap.get
-      currentMap = None
-      tmpMap
-    }
-  }
+  implicit class BufferedIteratorFASTAOps(val lines: BufferedIterator[String]) extends AnyVal {
 ```
 
-
-Exactly the same as `parseMapFromLines`, but returning either a parsing error or a `FASTA` denotation.
-
+Similar to `takeWhile`, but the iterator **can be reused** after
 
 ```scala
-  // TODO update after gettting good Raw in cosas records
-  final def parseFasta(lines: Iterator[String]): Iterator[ Either[ParseDenotationsError, FASTA.Value] ] =
-    parseMap(lines) map { strMap => FASTA parse strMap }
+    def cutUntil(condition: String => Boolean): Seq[String] = {
 
-  final def parseFastaDropErrors(lines: Iterator[String]): Iterator[FASTA.Value] =
-    parseFasta(lines) collect { case Right(fa) => fa }
+      @annotation.tailrec
+      def rec(acc: collection.mutable.Buffer[String]): collection.mutable.Buffer[String] = {
+        if (lines.hasNext && !condition(lines.head))
+          rec(acc :+ lines.next())
+        else acc
+      }
+
+      rec(collection.mutable.Buffer.empty)
+    }
+```
+
+Use this method to parse all FASTA values from the `lines` iterator (with possible errors)
+
+```scala
+    def parseFasta():
+        Iterator[ Either[ParseDenotationsError, FASTA.Value] ] =
+    new Iterator[ Either[ParseDenotationsError, FASTA.Value] ] {
+```
+
+If there is one more header, there is one more FASTA value (even if the sequence is empty)
+
+```scala
+      def hasNext: Boolean = lines.hasNext && fasta.header.is(lines.head)
+
+      def next(): Either[ParseDenotationsError, FASTA.Value] = {
+        val hdr: String = lines.next()
+        val seq: String = cutUntil(fasta.header.is).mkString
+
+        val valueMap = Map[String, String](
+            header.label -> hdr,
+          sequence.label -> seq
+        )
+
+        FASTA parse valueMap
+      }
+    }
+```
+
+This is the same as `parseFasta` dropping all erroneous FASTAs and skipping anything before the first FASTA value
+
+```scala
+    def parseFastaDropErrors(skipCrap: Boolean = true): Iterator[FASTA.Value] = {
+      if (skipCrap) cutUntil(fasta.header.is)
+      parseFasta() collect { case Right(fa) => fa }
+    }
+  }
+
 }
 
 ```
