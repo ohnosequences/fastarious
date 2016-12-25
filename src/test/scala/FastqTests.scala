@@ -32,8 +32,8 @@ class FastqTests extends FunSuite {
     import java.nio.file._
     import scala.collection.JavaConversions._
     // WARNING this will leak file descriptors
-    val lines = Files.lines(input.toPath).iterator
-    val buh = parseFastq(lines)
+    val lines: Iterator[String] = Files.lines(input.toPath).iterator
+    val buh = lines.parseFastq()
   }
 
   test("generate fastq file") {
@@ -68,10 +68,9 @@ class FastqTests extends FunSuite {
     import scala.collection.JavaConversions._
 
     // WARNING this will leak file descriptors
-    val lines   = Files.lines(fastaFile.toPath).iterator
-    val asFastq = fastq.parseFastqDropErrors(lines)
+    val lines: Iterator[String] = Files.lines(fastaFile.toPath).iterator
 
-    asFastq appendTo parsedFile
+    lines.parseFastqDropErrors() appendTo parsedFile
   }
 
 
