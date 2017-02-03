@@ -21,8 +21,7 @@ case object fastq {
     plus      :×:
     quality   :×:
     |[AnyType]
-  )
-  {
+  ) {
 
     type RealRaw =
       (id.type        := id.Raw)        ::
@@ -80,11 +79,9 @@ case object fastq {
   // the value here is assumed (and guaranteed) to be '@'-free
   final class FastqId private[fastarious] (val value: String) extends AnyVal {
 
-    def toFastaHeader: FastaHeader =
-      new FastaHeader(value)
+    def toFastaHeader: FastaHeader = new FastaHeader(value)
 
-    def asString: String =
-      s"${id.start}${value}"
+    def asString: String = s"${id.start}${value}"
   }
 
   case object FastqSequence {
@@ -109,8 +106,7 @@ case object fastq {
   // the value here is assumed (and guaranteed) to be '@'-free
   final class FastqPlus private[fastarious] (val value: String) extends AnyVal {
 
-    def asString: String =
-      s"${plus.start}${value}"
+    def asString: String = s"${plus.start}${value}"
   }
 
   case object FastqQuality {
@@ -126,40 +122,38 @@ case object fastq {
   case class FASTQOps(val seq: FASTQ.Value) extends AnyVal {
 
     def toFASTA: FASTA.Value = FASTA(
-      fasta.header( seq.getV(id).toFastaHeader )                   ::
-      fasta.sequence( FastaSequence(seq.getV(sequence).asString) ) :: *[AnyDenotation]
+      fasta.header( seq.getV(id).toFastaHeader ) ::
+      fasta.sequence( FastaSequence(seq.getV(sequence).asString) ) ::
+      *[AnyDenotation]
     )
 
-    def asString: String =
-      (
-        seq.getV(id).asString       ::
-        seq.getV(sequence).asString ::
-        seq.getV(plus).asString     ::
-        seq.getV(quality).asString  ::
-        Nil
-      ).mkString("\n")
+    def asString: String = Seq(
+      seq.getV(id).asString,
+      seq.getV(sequence).asString,
+      seq.getV(plus).asString,
+      seq.getV(quality).asString
+    ).mkString("\n")
   }
 
-  def parseMap(lines: Iterator[String]): Iterator[Map[String, String]] = {
+  implicit class IteratorFASTQOps(val lines: Iterator[String]) extends AnyVal {
 
-    // NOTE much unsafe, should check for id and qual chars etc
-    lines.grouped(4) map {
-      quartet => {
-        Map(
-          id.label       -> quartet(0),
-          sequence.label -> quartet(1),
-          plus.label     -> quartet(2),
-          quality.label  -> quartet(3)
-        )
-      }
+    def parseMap(): Iterator[Map[String, String]] = {
+
+      // NOTE much unsafe, should check for id and qual chars etc
+      lines.grouped(4) map { quartet => Map(
+        id.label       -> quartet(0),
+        sequence.label -> quartet(1),
+        plus.label     -> quartet(2),
+        quality.label  -> quartet(3)
+      )}
     }
+
+    def parseFastq(): Iterator[ Either[ParseDenotationsError, FASTQ.Value] ] =
+      parseMap map { strMap => FASTQ parse strMap }
+
+    def parseFastqDropErrors(): Iterator[FASTQ.Value] =
+      parseFastq collect { case Right(fq) => fq }
   }
-
-  def parseFastq(lines: Iterator[String]): Iterator[ Either[ParseDenotationsError, FASTQ.Value] ] =
-    parseMap(lines) map { strMap => FASTQ parse strMap }
-
-  def parseFastqDropErrors(lines: Iterator[String]): Iterator[FASTQ.Value] =
-    parseFastq(lines) collect { case Right(fq) => fq }
 
 }
 
