@@ -91,7 +91,7 @@ case object fastq {
   }
   final class FastqSequence private (val value: String) extends AnyVal {
 
-    private[fastarious] def asString: String = value
+    def asString: String = value
 
     def drop(n: Int): FastqSequence =
       FastqSequence( value drop n )
