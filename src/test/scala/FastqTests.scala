@@ -73,5 +73,20 @@ class FastqTests extends FunSuite {
     lines.parseFastqDropErrors() appendTo parsedFile
   }
 
+  test("FASTQ ops") {
 
+    val fq = FASTQ(
+      id(FastqId("MG32131.1"))                ::
+      sequence(FastqSequence("AATCGGCGACT"))  ::
+      plus(FastqPlus("+"))                    ::
+      quality(FastqQuality("!@GFGC;=FFG"))    ::
+        *[AnyDenotation]
+    )
+
+    assert { (fq drop 3).length == fq.length - 3 }
+
+    assert { (fq.slice(3, 6).length == (6 - 3) ) }
+
+    assert { fq.slice(3,6) == fq.drop(3).dropRight(fq.length - 6) }
+  }
 }

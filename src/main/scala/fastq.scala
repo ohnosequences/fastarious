@@ -89,7 +89,19 @@ case object fastq {
   }
   final class FastqSequence private (val value: String) extends AnyVal {
 
-    def asString = value
+    def asString: String = value
+
+    def drop(n: Int): FastqSequence =
+      FastqSequence( value drop n )
+
+    def dropRight(n: Int): FastqSequence =
+      FastqSequence( value dropRight n )
+
+    def slice(from: Int, until: Int): FastqSequence =
+      FastqSequence( value.slice(from, until) )
+
+    def length: Int =
+      value.length
   }
 
   case object FastqPlus {
@@ -114,9 +126,26 @@ case object fastq {
   }
   final class FastqQuality private (val value: String) extends AnyVal {
 
-    def asString = value
+    def asString: String = value
+
+    def drop(n: Int): FastqQuality =
+      FastqQuality( value drop n )
+
+    def dropRight(n: Int): FastqQuality =
+      FastqQuality( value dropRight n )
+
+    def slice(from: Int, until: Int): FastqQuality =
+      FastqQuality( value.slice(from, until) )
+
+    def length: Int =
+      value.length
   }
 
+  /*
+    ## FASTQ value ops
+
+
+  */
   case class FASTQOps(val seq: FASTQ.Value) extends AnyVal {
 
     def toFASTA: FASTA.Value = FASTA(
@@ -124,6 +153,30 @@ case object fastq {
       fasta.sequence( FastaSequence(seq.getV(sequence).asString) ) ::
       *[AnyDenotation]
     )
+
+    def drop(n: Int): FASTQ.Value =
+      seq update {
+        ( sequence  := { seq.getV(sequence) drop n } ) ::
+        ( quality   := { seq.getV(quality)  drop n } ) ::
+          *[AnyDenotation]
+      }
+
+    def dropRight(n: Int): FASTQ.Value =
+      seq update {
+        ( sequence  := { seq.getV(sequence) dropRight n } ) ::
+        ( quality   := { seq.getV(quality)  dropRight n } ) ::
+          *[AnyDenotation]
+      }
+
+    def slice(from: Int, until: Int): FASTQ.Value =
+      seq update {
+        ( sequence  := { seq.getV(sequence) .slice(from, until) } ) ::
+        ( quality   := { seq.getV(quality)  .slice(from, until) } ) ::
+          *[AnyDenotation]
+      }
+
+    def length: Int =
+      (seq getV sequence).length
 
     def asString: String = Seq(
       seq.getV(id).asString,
