@@ -79,7 +79,7 @@ case object fastq {
 
     def toFastaHeader: FastaHeader = new FastaHeader(value)
 
-    def asString: String = s"${id.start}${value}"
+    private[fastarious] def asString: String = s"${id.start}${value}"
   }
 
   case object FastqSequence {
@@ -89,7 +89,7 @@ case object fastq {
   }
   final class FastqSequence private (val value: String) extends AnyVal {
 
-    def asString: String = value
+    private[fastarious] def asString: String = value
 
     def drop(n: Int): FastqSequence =
       FastqSequence( value drop n )
@@ -116,7 +116,7 @@ case object fastq {
   // the value here is assumed (and guaranteed) to be '@'-free
   final class FastqPlus private[fastarious] (val value: String) extends AnyVal {
 
-    def asString: String = s"${plus.start}${value}"
+    private[fastarious] def asString: String = s"${plus.start}${value}"
   }
 
   case object FastqQuality {
@@ -126,7 +126,7 @@ case object fastq {
   }
   final class FastqQuality private (val value: String) extends AnyVal {
 
-    def asString: String = value
+    private[fastarious] def asString: String = value
 
     def drop(n: Int): FastqQuality =
       FastqQuality( value drop n )
