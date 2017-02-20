@@ -34,13 +34,15 @@ case object fastq {
 
     implicit class FASTQIteratorOps(val fastqs: Iterator[Value]) extends AnyVal {
 
-      def appendTo(file: File) = {
+      def appendTo(file: File): File = {
 
         val wr = new BufferedWriter(new FileWriter(file, true))
 
-        fastqs.foreach { fq => { wr.write( fq.asString ); wr.newLine } }
+        if(fastqs.hasNext) {
 
-        wr.close
+          fastqs.foreach { fq => { wr.write( fq.asString ); wr.newLine } }
+          wr.close; file
+        } else file
       }
     }
   }
@@ -191,12 +193,17 @@ case object fastq {
     def parseMap(): Iterator[Map[String, String]] = {
 
       // NOTE much unsafe, should check for id and qual chars etc
-      lines.grouped(4) map { quartet => Map(
-        id.label       -> quartet(0),
-        sequence.label -> quartet(1),
-        plus.label     -> quartet(2),
-        quality.label  -> quartet(3)
-      )}
+      lines
+        .filterNot(_.isEmpty)
+        .grouped(4)
+        .map { quartet =>
+          Map(
+            id.label       -> quartet(0),
+            sequence.label -> quartet(1),
+            plus.label     -> quartet(2),
+            quality.label  -> quartet(3)
+          )
+        }
     }
 
     def parseFastq(): Iterator[ Either[ParseDenotationsError, FASTQ.Value] ] =

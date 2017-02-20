@@ -39,7 +39,7 @@ class FastqTests extends FunSuite {
   test("generate fastq file") {
 
     val i = "@HADFAQ!!:$#>#$@"
-    val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
+    val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC"
     val p = "+hola soy una línea perdida!"
     val qual = "#$adF!#$DAFAFa5++0-afd324safd"
 
@@ -51,10 +51,14 @@ class FastqTests extends FunSuite {
       *[AnyDenotation]
     )
 
-    val fastqFile = new File("test.fastq")
-    Files.deleteIfExists(fastqFile.toPath)
+    val fastqFile =
+      new File("test.fastq")
 
-    val fastqs = Iterator.fill(10000)(fq)
+    // Files.deleteIfExists(fastqFile.toPath)
+
+    val fastqs =
+      Iterator.fill(10)(fq)
+
     fastqs appendTo fastqFile
   }
 
@@ -62,7 +66,7 @@ class FastqTests extends FunSuite {
 
     val fastaFile   = new File("test.fastq")
     val parsedFile  = new File("parsed.fastq")
-    Files.deleteIfExists(parsedFile.toPath)
+    // Files.deleteIfExists(parsedFile.toPath)
 
     import java.nio.file._
     import scala.collection.JavaConversions._
