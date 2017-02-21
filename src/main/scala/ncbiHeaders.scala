@@ -74,10 +74,10 @@ case object ncbiHeaders {
 
   case class NcbiHeaderOps(v: ncbiHeader.RealRaw) extends AnyVal {
 
-    def asFastaHeader: fasta.header.type := fasta.FastaHeader =
-      fasta.header(fasta.FastaHeader( v.map(toHeader).asList.mkString("") ))
-
-    def asFastqId: fastq.id.type := fastq.FastqId =
-      fastq.id(fastq.FastqId( v.map(toHeader).asList.mkString("") ))
+    // def asFastaHeader: fasta.header.type := fasta.FastaHeader =
+    //   fasta.header(fasta.FastaHeader( v.map(toHeader).asList.mkString("") ))
+    //
+    // def asFastqId: fastq.id.type := fastq.FastqId =
+    //   fastq.id(fastq.FastqId( v.map(toHeader).asList.mkString("") ))
   }
 }

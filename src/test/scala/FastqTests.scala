@@ -12,17 +12,16 @@ class FastqTests extends FunSuite {
   test("can create FASTQ values") {
 
     val i = "@HADFAQ!!:$#>#$@"
-    val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
-    val p = "+hola soy una línea perdida!"
-    val qual = "#$adF!#$DAFAFa5++0-afd324safd"
+    val rawSeq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
+    val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
 
-    val fq = FASTQ(
-      id(FastqId(i))                ::
-      sequence(FastqSequence(seq))  ::
-      plus(FastqPlus(p))            ::
-      quality(FastqQuality(qual))   ::
-      *[AnyDenotation]
+    val fq = FASTQ.from(
+      id        = i,
+      sequence  = rawSeq,
+      quality   = rawQual
     )
+
+    assert { fq == None }
   }
 
   test("can parse fastq files") {
@@ -33,33 +32,30 @@ class FastqTests extends FunSuite {
     import scala.collection.JavaConversions._
     // WARNING this will leak file descriptors
     val lines: Iterator[String] = Files.lines(input.toPath).iterator
-    val buh = lines.parseFastq()
+    val buh = lines.parseFastq
   }
 
   test("generate fastq file") {
 
-    val i = "@HADFAQ!!:$#>#$@"
-    val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC"
-    val p = "+hola soy una línea perdida!"
-    val qual = "#$adF!#$DAFAFa5++0-afd324safd"
+    val i       = "@HADFAQ!!:$#>#$@"
+    val rawSeq  = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC"
+    val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
 
-    val fq = FASTQ(
-      id(FastqId(i))                ::
-      sequence(FastqSequence(seq))  ::
-      plus(FastqPlus(p))            ::
-      quality(FastqQuality(qual))   ::
-      *[AnyDenotation]
+    val fq = FASTQ.from(
+      id        = i,
+      sequence  = rawSeq,
+      quality   = rawQual
     )
 
     val fastqFile =
       new File("test.fastq")
 
-    // Files.deleteIfExists(fastqFile.toPath)
+    Files.deleteIfExists(fastqFile.toPath)
 
     val fastqs =
-      Iterator.fill(10)(fq)
+      fq map { Iterator.fill(1000000)(_) }
 
-    fastqs appendTo fastqFile
+    fastqs foreach { _ appendTo fastqFile }
   }
 
   test("parsing from iterator") {
@@ -74,23 +70,27 @@ class FastqTests extends FunSuite {
     // WARNING this will leak file descriptors
     val lines: Iterator[String] = Files.lines(fastaFile.toPath).iterator
 
-    lines.parseFastqDropErrors() appendTo parsedFile
+    lines.parseFastqDropErrors appendTo parsedFile
   }
 
   test("FASTQ ops") {
 
-    val fq = FASTQ(
-      id(FastqId("MG32131.1"))                ::
-      sequence(FastqSequence("AATCGGCGACT"))  ::
-      plus(FastqPlus("+"))                    ::
-      quality(FastqQuality("!@GFGC;=FFG"))    ::
-        *[AnyDenotation]
-    )
+    val fqOpt =
+      FASTQ.from(
+        id        = "@HADFAQ!!:$#>#$@",
+        sequence  = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC",
+        quality   = "#$adF!#$DAFAFa5++0-afd324safd"
+      )
 
-    assert { (fq drop 3).length == fq.length - 3 }
+    fqOpt foreach { fqq =>
 
-    assert { (fq.slice(3, 6).length == (6 - 3) ) }
+      val fq = fqq.sequence
 
-    assert { fq.slice(3,6) == fq.drop(3).dropRight(fq.length - 6) }
+      assert { (fq drop 3).length == fq.length - 3 }
+
+      assert { (fq.slice(3, 6).length == (6 - 3) ) }
+
+      assert { fq.slice(3,6) == fq.drop(3).dropRight(fq.length - 6) }
+    }
   }
 }
