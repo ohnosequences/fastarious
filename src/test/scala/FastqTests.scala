@@ -100,9 +100,7 @@ class FastqTests extends FunSuite {
       val fq = fqq.sequence
 
       assert { (fq drop 3).length == fq.length - 3 }
-
       assert { (fq.slice(3, 6).length == (6 - 3) ) }
-
       assert { fq.slice(3,6) == fq.drop(3).dropRight(fq.length - 6) }
     }
   }
