@@ -48,6 +48,14 @@ case object fastq {
     def filterQuality(p: Int => Boolean): Sequence =
       filter({ (s,q) => p(q) })
 
+    def takeWhile(p: (Char, Int) => Boolean): Sequence = {
+      val (seq, qual) =
+        (sequence zip quality.value)
+          .takeWhile({ cq => p(cq._1, cq._2) })
+          .unzip
+
+      Sequence(seq.mkString, Quality(qual))
+    }
   }
 
   case object Sequence {
