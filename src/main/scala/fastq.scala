@@ -207,24 +207,28 @@ case object fastq {
     def from(raw: String): Option[Id] = {
 
       // just *one* line
+      // FIXME: raw starts with several @, it will drop them all
       val l = raw.filterNot(_ == '\n').dropWhile(_ == '@')
 
       if(l.nonEmpty) Some( new Id(l) ) else None
     }
 
+    // FIXME: this passes the raw string (with @) to the constructor
     def parseFrom(raw: String): Option[Id] =
       if(isValid(raw)) Some( new Id(raw) ) else None
   }
 
   case class FASTQ(val id: Id, val sequence: Sequence) {
 
-    def asStringPhred33: String =
-      s"${id.asString}\n${sequence.asStringPhred33}"
+    def asStringPhred33: String = Seq(
+      id.asString,
+      sequence.asStringPhred33
+    ).mkString("\n")
 
     def toFASTA: FASTA.Value = FASTA(
       fasta.header( FastaHeader(id.value) )              ::
       fasta.sequence( FastaSequence(sequence.sequence) ) ::
-        *[AnyDenotation]
+      *[AnyDenotation]
     )
   }
 
@@ -234,15 +238,12 @@ case object fastq {
       id: String,
       sequence: String,
       quality: String
-    )
-    : Option[FASTQ] = {
-
-      val z = (Id.from(id), Sequence.fromStringsPhred33(sequence, quality))
+    ): Option[FASTQ] = {
 
       for {
-        a <- z._1
-        b <- z._2
-      } yield FASTQ(a, b)
+        i <- Id.from(id)
+        s <- Sequence.fromStringsPhred33(sequence, quality)
+      } yield FASTQ(i, s)
     }
   }
 
@@ -250,14 +251,17 @@ case object fastq {
 
     def appendTo(file: File): File = {
 
-      val wr = new BufferedWriter(new FileWriter(file, true))
-
       if(fastqs.hasNext) {
+        val wr = new BufferedWriter(new FileWriter(file, true))
 
-        fastqs.foreach { fq => { wr.write( fq.asStringPhred33 ); wr.newLine } }
-        wr.close; file
+        fastqs.foreach { fq =>
+          wr.write( fq.asStringPhred33 )
+          wr.newLine
+        }
+        wr.close
       }
-      else file
+
+      file
     }
   }
 
@@ -268,13 +272,14 @@ case object fastq {
         .filterNot(_.isEmpty)
         .grouped(4)
         .map { quartet =>
-          if(quartet(3) == "+") {
 
-            Id.parseFrom( quartet(0) ) flatMap { id =>
-              Sequence.fromStringsPhred33( quartet(1), quartet(3) ) map { FASTQ(id, _) }
-            }
+          if(quartet(3) != "+") None
+          else {
+            for {
+              i <- Id.from( quartet(0) ) // or .parseFrom?
+              s <- Sequence.fromStringsPhred33( quartet(1), quartet(3) )
+            } yield FASTQ(i, s)
           }
-          else None
         }
 
     def parseFastqPhred33DropErrors: Iterator[FASTQ] =
