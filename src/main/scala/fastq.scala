@@ -56,6 +56,18 @@ case object fastq {
 
       Sequence(seq.mkString, Quality(qual))
     }
+
+    def dropWhile(p: (Char, Int) => Boolean): Sequence = {
+      val (seq, qual) =
+        (sequence zip quality.value)
+          .dropWhile({ cq => p(cq._1, cq._2) })
+          .unzip
+
+      Sequence(seq.mkString, Quality(qual))
+    }
+
+    def dropWhileQuality(p: Int => Boolean): Sequence =
+      dropWhile({ (s,q) => p(q) })
   }
 
   case object Sequence {
@@ -71,6 +83,14 @@ case object fastq {
 
     def toPhred33: String =
       (value map Quality.toPhred33).mkString
+
+    def average: BigDecimal =
+      if(value.isEmpty) 0 else {
+
+        val sum: BigDecimal = value.foldLeft(0: BigDecimal){ (acc, v) => acc + (v:BigDecimal) }
+
+        sum / (value.length)
+      }
   }
 
   case object Quality {
