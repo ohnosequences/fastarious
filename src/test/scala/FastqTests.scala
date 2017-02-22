@@ -15,7 +15,7 @@ class FastqTests extends FunSuite {
     val rawSeq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
     val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
 
-    val fq = FASTQ.from(
+    val fq = FASTQ.fromStringsPhred33(
       id        = i,
       sequence  = rawSeq,
       quality   = rawQual
@@ -32,7 +32,7 @@ class FastqTests extends FunSuite {
     import scala.collection.JavaConversions._
     // WARNING this will leak file descriptors
     val lines: Iterator[String] = Files.lines(input.toPath).iterator
-    val buh = lines.parseFastq
+    val buh = lines.parseFastqPhred33
   }
 
   test("generate fastq file") {
@@ -41,7 +41,7 @@ class FastqTests extends FunSuite {
     val rawSeq  = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC"
     val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
 
-    val fq = FASTQ.from(
+    val fq = FASTQ.fromStringsPhred33(
       id        = i,
       sequence  = rawSeq,
       quality   = rawQual
@@ -70,13 +70,26 @@ class FastqTests extends FunSuite {
     // WARNING this will leak file descriptors
     val lines: Iterator[String] = Files.lines(fastaFile.toPath).iterator
 
-    lines.parseFastqDropErrors appendTo parsedFile
+    lines.parseFastqPhred33DropErrors appendTo parsedFile
+  }
+
+  test("FASTQ quality") {
+
+    val rawQual = "$adF!#$DAFAFa5++0-afd324safd"
+
+    val optQual =
+      Quality.fromPhred33(rawQual)
+
+    optQual foreach { q =>
+      assert { q.toPhred33 == rawQual }
+      assert { q.value.forall { v => 0 <= v && v <= 93 } }
+    }
   }
 
   test("FASTQ ops") {
 
     val fqOpt =
-      FASTQ.from(
+      FASTQ.fromStringsPhred33(
         id        = "@HADFAQ!!:$#>#$@",
         sequence  = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC",
         quality   = "#$adF!#$DAFAFa5++0-afd324safd"

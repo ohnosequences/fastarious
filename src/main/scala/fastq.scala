@@ -8,48 +8,66 @@ case object fastq {
 
   /*
 
-    # sequence
+    ## Sequence
 
     A fastq sequence has the sequence itself plus the corresponding quality. They are checked at construction.
   */
-  case class seq private[fastarious] (val sequence: String, val quality: phred33) {
+  case class Sequence private[fastarious] (val sequence: String, val quality: Quality) {
 
     def length =
       sequence.length
 
-    def drop(n: Int): seq =
-      seq( sequence drop n, phred33( quality.value drop n ) )
+    def drop(n: Int): Sequence =
+      Sequence( sequence drop n, Quality( quality.value drop n ) )
 
-    def dropRight(n: Int): seq =
-      seq( sequence dropRight n, phred33( quality.value dropRight n ) )
+    def dropRight(n: Int): Sequence =
+      Sequence( sequence dropRight n, Quality( quality.value dropRight n ) )
 
-    def slice(from: Int, until: Int): seq =
-      seq( sequence.slice(from, until), phred33( quality.value.slice(from, until) ) )
+    def slice(from: Int, until: Int): Sequence =
+      Sequence( sequence.slice(from, until), Quality( quality.value.slice(from, until) ) )
 
-    def ++(other: seq): seq =
-      seq(sequence ++ other.sequence, phred33( quality.value ++ other.quality.value ))
+    def ++(other: Sequence): Sequence =
+      Sequence(sequence ++ other.sequence, Quality( quality.value ++ other.quality.value ))
 
-    def asString: String =
-      s"${sequence}\n+\n${quality.value}"
+    def asStringPhred33: String =
+      s"${sequence}\n+\n${quality.toPhred33}"
   }
 
-  case object seq {
+  case object Sequence {
 
-    private def from(rawSeq: String, rawQual: phred33): Option[seq] =
-      if(rawSeq.length == rawQual.value.length) Some(seq(rawSeq, rawQual)) else None
-
-    def from(rawSeq: String, rawQual: String): Option[seq] =
-      (phred33 from rawQual) flatMap { from(rawSeq, _) }
+    def fromStringsPhred33(rawSeq: String, rawQual: String): Option[Sequence] =
+      if(rawSeq.length == rawQual.length)
+        Quality.fromPhred33(rawQual).map( Sequence(rawSeq, _) )
+      else
+        None
   }
 
-  case class  phred33 private[fastarious] (val value: String) extends AnyVal
-  case object phred33 {
+  case class  Quality private[fastarious] (val value: Seq[Int]) extends AnyVal {
 
-    def from(raw: String): Option[phred33] =
-      if(raw forall isValid) Some(phred33(raw)) else None
+    def toPhred33: String =
+      (value map Quality.toPhred33).mkString
+  }
 
-    val isValid: Char => Boolean =
-      c => 33 <= c.toInt && c.toInt <= 126
+  case object Quality {
+
+    def fromPhred33(raw: String): Option[Quality] = {
+
+      def rec(cs: String, acc: Seq[Int], errors: Boolean): Option[Quality] =
+        if(errors) { None } else {
+
+          if(cs.isEmpty) Some( Quality(acc) ) else {
+
+            cs.head.toInt match {
+              case q if 33 <= q && q <= 126 => rec(cs.tail, acc :+ (q - 33), errors)
+              case _                        => rec(cs, acc, errors = true)
+            }
+          }
+        }
+
+      rec(raw, Seq.empty, false)
+    }
+
+    val toPhred33: Int => Char = i => (i + 33).toChar
   }
 
   // TODO value should not have @ at the beginning
@@ -68,7 +86,7 @@ case object fastq {
     def from(raw: String): Option[Id] = {
 
       // just *one* line
-      val l = raw.filterNot(_ == '\n').dropWhile(_ == "@")
+      val l = raw.filterNot(_ == '\n').dropWhile(_ == '@')
 
       if(l.nonEmpty) Some( new Id(l) ) else None
     }
@@ -77,10 +95,10 @@ case object fastq {
       if(isValid(raw)) Some( new Id(raw) ) else None
   }
 
-  case class FASTQ(val id: Id, val sequence: seq) {
+  case class FASTQ(val id: Id, val sequence: Sequence) {
 
-    def asString: String =
-      s"${id.asString}\n${sequence.asString}"
+    def asStringPhred33: String =
+      s"${id.asString}\n${sequence.asStringPhred33}"
 
     def toFASTA: FASTA.Value = FASTA(
       fasta.header( FastaHeader(id.value) )              ::
@@ -91,14 +109,14 @@ case object fastq {
 
   case object FASTQ {
 
-    def from(
+    def fromStringsPhred33(
       id: String,
       sequence: String,
       quality: String
     )
     : Option[FASTQ] = {
 
-      val z = (Id.from(id), seq.from(sequence, quality))
+      val z = (Id.from(id), Sequence.fromStringsPhred33(sequence, quality))
 
       for (a <- z._1; b <- z._2) yield FASTQ(a,b)
     }
@@ -112,7 +130,7 @@ case object fastq {
 
       if(fastqs.hasNext) {
 
-        fastqs.foreach { fq => { wr.write( fq.asString ); wr.newLine } }
+        fastqs.foreach { fq => { wr.write( fq.asStringPhred33 ); wr.newLine } }
         wr.close; file
       }
       else file
@@ -121,7 +139,7 @@ case object fastq {
 
   implicit class IteratorFASTQOps(val lines: Iterator[String]) extends AnyVal {
 
-    def parseFastq: Iterator[Option[FASTQ]] =
+    def parseFastqPhred33: Iterator[Option[FASTQ]] =
       lines
         .filterNot(_.isEmpty)
         .grouped(4)
@@ -129,14 +147,14 @@ case object fastq {
           if(quartet(3) == "+") {
 
             Id.parseFrom( quartet(0) ) flatMap { id =>
-              seq.from( quartet(1), quartet(3) ) map { FASTQ(id,_) }
+              Sequence.fromStringsPhred33( quartet(1), quartet(3) ) map { FASTQ(id,_) }
             }
           }
           else None
         }
 
-    def parseFastqDropErrors: Iterator[FASTQ] =
-      parseFastq collect { case Some(fq) => fq }
+    def parseFastqPhred33DropErrors: Iterator[FASTQ] =
+      parseFastqPhred33 collect { case Some(fq) => fq }
   }
 
 }
