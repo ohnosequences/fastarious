@@ -30,6 +30,9 @@ case object preprocessing {
 
       rec(s)
     }
+
+    def longestSuffixOver(quality: Int): Sequence =
+      s takeWhileQuality { _ >= quality }
   }
 }
 

@@ -20,6 +20,12 @@ case object fastq {
     def length =
       sequence.length
 
+    def at(index: Int): Option[(Char,Int)] =
+      if(0 <= index && index <= length - 1)
+        Some( ( sequence(index), quality.value(index) ) )
+      else
+        None
+
     def drop(n: Int): Sequence =
       Sequence( sequence drop n, Quality( quality.value drop n ) )
 
