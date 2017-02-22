@@ -7,12 +7,15 @@ import java.io._
 case object fastq {
 
   /*
-
     ## Sequence
 
-    A fastq sequence has the sequence itself plus the corresponding quality. They are checked at construction.
+    A fastq sequence has the sequence itself plus the corresponding quality. At construction, a `Sequence` is checked to have the same length for sequence and quality.
   */
+  // TODO re-evaluate this design. Probably better to have Seq[(Char, Qual)] as primitive
   case class Sequence private[fastarious] (val sequence: String, val quality: Quality) {
+
+    def isEmpty =
+      sequence.isEmpty
 
     def length =
       sequence.length
@@ -26,12 +29,27 @@ case object fastq {
     def slice(from: Int, until: Int): Sequence =
       Sequence( sequence.slice(from, until), Quality( quality.value.slice(from, until) ) )
 
+    def take(n: Int): Sequence =
+      Sequence( sequence take n, Quality( quality.value take n ) )
+
+    def takeRight(n: Int): Sequence =
+      Sequence( sequence takeRight n, Quality( quality.value takeRight n ) )
+
     def ++(other: Sequence): Sequence =
       Sequence(sequence ++ other.sequence, Quality( quality.value ++ other.quality.value ))
 
     def asStringPhred33: String =
       s"${sequence}\n+\n${quality.toPhred33}"
 
+    /*
+      ### Filtering operations
+
+      All these methods (filter, takeWhile/dropWhile, etc) take a predicate on *both* sequence and quality. There are convenience methods `xyzSequence` and `xyzQuality` which have the same behavior as `xyz` but for predicates on sequence and quality respectively.
+    */
+
+    /*
+      #### filter
+    */
     def filter(p: (Char, Int) => Boolean): Sequence = {
 
       val (seq, qual) =
@@ -48,6 +66,9 @@ case object fastq {
     def filterQuality(p: Int => Boolean): Sequence =
       filter({ (s,q) => p(q) })
 
+    /*
+      #### takeWhile
+    */
     def takeWhile(p: (Char, Int) => Boolean): Sequence = {
       val (seq, qual) =
         (sequence zip quality.value)
@@ -57,6 +78,15 @@ case object fastq {
       Sequence(seq.mkString, Quality(qual))
     }
 
+    def takeWhileQuality(p: Int => Boolean): Sequence =
+      takeWhile({ (s,q) => p(q) })
+
+    def takeWhileSequence(p: Char => Boolean): Sequence =
+      takeWhile({ (s,q) => p(s) })
+
+    /*
+      #### dropWhile
+    */
     def dropWhile(p: (Char, Int) => Boolean): Sequence = {
       val (seq, qual) =
         (sequence zip quality.value)
@@ -68,6 +98,32 @@ case object fastq {
 
     def dropWhileQuality(p: Int => Boolean): Sequence =
       dropWhile({ (s,q) => p(q) })
+
+    def dropWhileSequence(p: Char => Boolean): Sequence =
+      dropWhile({ (s,q) => p(s) })
+
+    /*
+      #### span
+    */
+    def span(p: (Char, Int) => Boolean): (Sequence, Sequence) = {
+      val (sq1, sq2) =
+        (sequence zip quality.value)
+          .span({ cq => p(cq._1, cq._2) })
+
+      val (s1,q1) = sq1.unzip
+      val (s2,q2) = sq2.unzip
+
+      (
+        Sequence(s1.mkString, Quality(q1)),
+        Sequence(s2.mkString, Quality(q2))
+      )
+    }
+
+    def spanQuality(p: Int => Boolean): (Sequence, Sequence) =
+      span({ (s,q) => p(q) })
+
+    def spanSequence(p: Char => Boolean): (Sequence, Sequence) =
+      span({ (s,q) => p(s) })
   }
 
   case object Sequence {
@@ -85,12 +141,10 @@ case object fastq {
       (value map Quality.toPhred33).mkString
 
     def average: BigDecimal =
-      if(value.isEmpty) 0 else {
-
-        val sum: BigDecimal = value.foldLeft(0: BigDecimal){ (acc, v) => acc + (v:BigDecimal) }
-
-        sum / (value.length)
-      }
+      if(value.isEmpty)
+        0
+      else
+        value.foldLeft(0: BigDecimal){ (acc, v) => acc + (v:BigDecimal) } / (value.length)
   }
 
   case object Quality {
@@ -115,8 +169,7 @@ case object fastq {
     val toPhred33: Int => Char = i => (i + 33).toChar
   }
 
-  // TODO value should not have @ at the beginning
-  class Id(val value: String) extends AnyVal {
+  class Id private[fastarious] (val value: String) extends AnyVal {
 
     def asString: String =
       s"@${value}"
@@ -201,5 +254,4 @@ case object fastq {
     def parseFastqPhred33DropErrors: Iterator[FASTQ] =
       parseFastqPhred33 collect { case Some(fq) => fq }
   }
-
 }

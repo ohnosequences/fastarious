@@ -8,14 +8,28 @@ import java.nio.file.Files
 import java.io._
 
 /*
-  Preprocessing examples
+  # Preprocessing examples
 */
 case object preprocessing {
 
-  implicit class FastqPreprocessingOps(val s: Sequence) {
+  implicit class FastqPreprocessingOps(val s: Sequence) extends AnyVal {
 
     def dropTrailingUnder(threshold: Int): Sequence =
       s dropWhileQuality { _ <= threshold }
+
+    def dropWhileAverage(windowSize: Int, average: BigDecimal): Sequence = {
+
+      def rec(acc: Sequence): Sequence =
+        if(acc.isEmpty)
+          acc
+        else
+          if( (acc takeRight windowSize).quality.average <= average )
+            rec(acc dropRight windowSize)
+          else
+            acc
+
+      rec(s)
+    }
   }
 }
 
