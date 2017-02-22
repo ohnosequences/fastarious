@@ -26,106 +26,76 @@ import java.io._
 */
 case object fasta {
 
-  case object header extends Type[FastaHeader]("header") {
+  case class FASTA(
+    val header: Header
+    val sequence: Sequence
+  )
 
-    val start: String = ">"
+  case class Header private[fastarious] (val value: String) extends AnyVal {
 
-    def is(str: String): Boolean = str startsWith start
-  }
-  case object sequence  extends Type[FastaSequence]("sequence") {
-
-    def is(str: String): Boolean = ! header.is(str)
-  }
-
-  /*
-    The `FASTA` record is what you use for sane interaction with fasta elements.
-  */
-  type FASTA = FASTA.type
-  case object FASTA extends RecordType(
-    header    :×:
-    sequence  :×:
-    |[AnyType]
-  ) {
-    type RealRaw =
-      (header.type := FastaHeader) ::
-      (sequence.type := FastaSequence) ::
-      *[AnyDenotation]
-
-    type Value = FASTA := RealRaw
-
-    implicit def fastaOps(fa: FASTA.Value): FASTAOps = new FASTAOps(fa)
-    implicit def fastaIteratorOps(fas: Iterator[FASTA.Value]): FASTAIteratorOps = new FASTAIteratorOps(fas)
-  }
-
-  final class FASTAIteratorOps(val fastas: Iterator[FASTA.Value]) extends AnyVal {
-
-    def appendTo(file: File) = {
-
-      val wr = new BufferedWriter(new FileWriter(file, true))
-
-      fastas.foreach { fa => { wr.write( fa.asString ); wr.newLine } }
-
-      wr.close
-    }
-  }
-
-
-  case object FastaHeader {
-
-    def apply(h: String): FastaHeader = new FastaHeader(h.stripPrefix(header.start))
-  }
-
-  final class FastaHeader private[fastarious](val value: String) extends AnyVal {
-
-    override def toString: String = s"${header.start}${value}"
+    override def toString: String = s">${value}"
 
     final def id: String = value.takeWhile(_ != ' ')
+
     /* Note that description will keep the initial empty space, so that `value == s"${id}${description}"` */
     final def description: String = value.stripPrefix(id)
   }
 
-  case object FastaSequence {
+  case object Header {
 
-    def apply(ll: Seq[String]): FastaSequence =
-      new FastaSequence( ll.map(utils.removeAllSpace).mkString )
+    def from(raw: String): Option[Header] = {
+      if (isValid(raw)) Some(Header(h.stripPrefix(">")))
+      else None
 
-    def apply(l: String): FastaSequence =
-      new FastaSequence( utils.removeAllSpace(l) )
+    def isValid(str: String): Boolean = str startsWith ">"
   }
 
-  final class FastaSequence private (val value: String) extends AnyVal {
+  case class Sequence private (val value: String) extends AnyVal {
 
-    final def ++(other: FastaSequence): FastaSequence =
-      FastaSequence(s"${value}${other.value}")
+    final def ++(other: Sequence): Sequence =
+      Sequence(s"${value}${other.value}")
   }
 
-  final class FASTAOps(val fa: FASTA.Value) extends AnyVal {
+  case object Sequence {
+
+    def apply(ll: Seq[String]): Sequence =
+      new Sequence( ll.map(utils.removeAllSpace).mkString )
+
+    def apply(l: String): Sequence =
+      new Sequence( utils.removeAllSpace(l) )
+
+    // def isValid(str: String): Boolean = ! header.is(str)
+  }
+
+  implicit class FASTAOps(val fa: FASTA.Value) extends AnyVal {
 
     // instead of toLines, which is a confusing name anyway
 
     def toMap: Map[String, String] = Map(
-      header.label   -> (fa getV header).toString,
-      sequence.label -> (fa getV sequence).value.grouped(70).mkString("\n")
+      header.label   -> (fa.header).toString,
+      sequence.label -> (fa.sequence).value.grouped(70).mkString("\n")
     )
 
     def asString: String = toMap.values.mkString("\n")
-    def lines: Seq[String] =(fa getV header).toString :: (fa getV sequence).value.grouped(70).toList
+    def lines: Seq[String] = (fa.header).toString :: (fa.sequence).value.grouped(70).toList
   }
 
-  /*
-    ## Fasta parsing and serialization
 
-    These are parser and serializers instances for the `FASTA` record field. They make possible transparent use of *cosas* record parsing from `Map[String,String]`.
-  */
-  implicit lazy val headerSerializer =
-    new DenotationSerializer(header, header.label)({ h: FastaHeader => Some(h.toString) })
-  implicit lazy val headerParser =
-    new DenotationParser(header, header.label)({ v: String => Some(FastaHeader(v)) })
 
-  implicit lazy val sequenceSerializer =
-    new DenotationSerializer(sequence, sequence.label)({ fl: FastaSequence => Some(fl.value) })
-  implicit lazy val sequenceParser =
-    new DenotationParser(sequence, sequence.label)({ v: String => Some(FastaSequence(v)) })
+  implicit class FASTAIteratorOps(val fastas: Iterator[FASTA.Value]) extends AnyVal {
+
+    def appendTo(file: File): File = {
+
+      val wr = new BufferedWriter(new FileWriter(file, true))
+      fastas.foreach { fa =>
+        wr.write( fa.asString )
+        wr.newLine
+      }
+      wr.close
+
+      file
+    }
+  }
 
   /* Note, all we only use `next`, `hasNext` and `head` method here, so the `lines` iterator can be used after calling any of these extension methods and can be considered as the parsing "remainder" (i.e. unparsed part) */
   implicit class BufferedIteratorFASTAOps(val lines: BufferedIterator[String]) extends AnyVal {
