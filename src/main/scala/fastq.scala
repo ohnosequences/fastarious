@@ -73,6 +73,19 @@ case object fastq {
       filter({ (s,q) => p(q) })
 
     /*
+      #### count
+    */
+    def count(p: (Char, Int) => Boolean): Int =
+      (sequence zip quality.value)
+        .count({ cq => p(cq._1, cq._2) })
+
+    def countSequence(p: Char => Boolean): Int =
+      count({ (s,q) => p(s) })
+
+    def countQuality(p: Int => Boolean): Int =
+      count({ (s,q) => p(q) })
+
+    /*
       #### takeWhile
     */
     def takeWhile(p: (Char, Int) => Boolean): Sequence = {

@@ -33,6 +33,12 @@ case object preprocessing {
 
     def longestSuffixOver(quality: Int): Sequence =
       s takeWhileQuality { _ >= quality }
+
+    def numberOfNs: Int =
+      s countSequence { _.toUpper == 'N' }
+
+    def countQualityOver(threshold: Int): Int =
+      s countQuality { _ >= threshold }
   }
 }
 
