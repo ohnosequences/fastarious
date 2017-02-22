@@ -20,7 +20,7 @@ case object fastq {
     def length =
       sequence.length
 
-    def at(index: Int): Option[(Char,Int)] =
+    def at(index: Int): Option[(Char, Int)] =
       if(0 <= index && index <= length - 1)
         Some( ( sequence(index), quality.value(index) ) )
       else
@@ -44,8 +44,11 @@ case object fastq {
     def ++(other: Sequence): Sequence =
       Sequence(sequence ++ other.sequence, Quality( quality.value ++ other.quality.value ))
 
-    def asStringPhred33: String =
-      s"${sequence}\n+\n${quality.toPhred33}"
+    def asStringPhred33: String = Seq(
+      sequence,
+      "+",
+      quality.toPhred33
+    ).mkString("\n")
 
     /*
       ### Filtering operations
@@ -57,33 +60,32 @@ case object fastq {
       #### filter
     */
     def filter(p: (Char, Int) => Boolean): Sequence = {
-
       val (seq, qual) =
         (sequence zip quality.value)
-          .filter({ cq => p(cq._1, cq._2) })
+          .filter { case (c, q) => p(c, q) }
           .unzip
 
       Sequence(seq.mkString, Quality(qual))
     }
 
     def filterSequence(p: Char => Boolean): Sequence =
-      filter({ (s,q) => p(s) })
+      filter { (s, _) => p(s) }
 
     def filterQuality(p: Int => Boolean): Sequence =
-      filter({ (s,q) => p(q) })
+      filter { (_, q) => p(q) }
 
     /*
       #### count
     */
     def count(p: (Char, Int) => Boolean): Int =
       (sequence zip quality.value)
-        .count({ cq => p(cq._1, cq._2) })
+        .count { case (c, q) => p(c, q) }
 
     def countSequence(p: Char => Boolean): Int =
-      count({ (s,q) => p(s) })
+      count { (s, _) => p(s) }
 
     def countQuality(p: Int => Boolean): Int =
-      count({ (s,q) => p(q) })
+      count { (_, q) => p(q) }
 
     /*
       #### takeWhile
@@ -91,17 +93,17 @@ case object fastq {
     def takeWhile(p: (Char, Int) => Boolean): Sequence = {
       val (seq, qual) =
         (sequence zip quality.value)
-          .takeWhile({ cq => p(cq._1, cq._2) })
+          .takeWhile { case (c, q) => p(c, q) }
           .unzip
 
       Sequence(seq.mkString, Quality(qual))
     }
 
     def takeWhileQuality(p: Int => Boolean): Sequence =
-      takeWhile({ (s,q) => p(q) })
+      takeWhile { (_, q) => p(q) }
 
     def takeWhileSequence(p: Char => Boolean): Sequence =
-      takeWhile({ (s,q) => p(s) })
+      takeWhile { (s, _) => p(s) }
 
     /*
       #### dropWhile
@@ -109,17 +111,17 @@ case object fastq {
     def dropWhile(p: (Char, Int) => Boolean): Sequence = {
       val (seq, qual) =
         (sequence zip quality.value)
-          .dropWhile({ cq => p(cq._1, cq._2) })
+          .dropWhile { case (c, q) => p(c, q) }
           .unzip
 
       Sequence(seq.mkString, Quality(qual))
     }
 
     def dropWhileQuality(p: Int => Boolean): Sequence =
-      dropWhile({ (s,q) => p(q) })
+      dropWhile { (_, q) => p(q) }
 
     def dropWhileSequence(p: Char => Boolean): Sequence =
-      dropWhile({ (s,q) => p(s) })
+      dropWhile { (s, _) => p(s) }
 
     /*
       #### span
@@ -127,10 +129,10 @@ case object fastq {
     def span(p: (Char, Int) => Boolean): (Sequence, Sequence) = {
       val (sq1, sq2) =
         (sequence zip quality.value)
-          .span({ cq => p(cq._1, cq._2) })
+          .span { case (c, q) => p(c, q) }
 
-      val (s1,q1) = sq1.unzip
-      val (s2,q2) = sq2.unzip
+      val (s1, q1) = sq1.unzip
+      val (s2, q2) = sq2.unzip
 
       (
         Sequence(s1.mkString, Quality(q1)),
@@ -139,10 +141,10 @@ case object fastq {
     }
 
     def spanQuality(p: Int => Boolean): (Sequence, Sequence) =
-      span({ (s,q) => p(q) })
+      span { (_, q) => p(q) }
 
     def spanSequence(p: Char => Boolean): (Sequence, Sequence) =
-      span({ (s,q) => p(s) })
+      span { (s, _) => p(s) }
   }
 
   case object Sequence {
@@ -163,13 +165,14 @@ case object fastq {
       if(value.isEmpty)
         0
       else
-        value.foldLeft(0: BigDecimal){ (acc, v) => acc + (v:BigDecimal) } / (value.length)
+        value.foldLeft(0: BigDecimal){ (acc, v) => acc + (v: BigDecimal) } / (value.length)
   }
 
   case object Quality {
 
     def fromPhred33(raw: String): Option[Quality] = {
 
+      @annotation.tailrec
       def rec(cs: String, acc: Seq[Int], errors: Boolean): Option[Quality] =
         if(errors) { None } else {
 
@@ -185,7 +188,7 @@ case object fastq {
       rec(raw, Seq.empty, false)
     }
 
-    val toPhred33: Int => Char = i => (i + 33).toChar
+    val toPhred33: Int => Char = { i => (i + 33).toChar }
   }
 
   class Id private[fastarious] (val value: String) extends AnyVal {
@@ -193,12 +196,13 @@ case object fastq {
     def asString: String =
       s"@${value}"
   }
+
   case object Id {
 
-    private val isValid: String => Boolean =
-      raw =>
-        (raw startsWith "@") &&
-        !(raw contains "\n")
+    private val isValid: String => Boolean = { raw =>
+      (raw startsWith "@") &&
+      !(raw contains "\n")
+    }
 
     def from(raw: String): Option[Id] = {
 
@@ -235,7 +239,10 @@ case object fastq {
 
       val z = (Id.from(id), Sequence.fromStringsPhred33(sequence, quality))
 
-      for (a <- z._1; b <- z._2) yield FASTQ(a,b)
+      for {
+        a <- z._1
+        b <- z._2
+      } yield FASTQ(a, b)
     }
   }
 
@@ -264,7 +271,7 @@ case object fastq {
           if(quartet(3) == "+") {
 
             Id.parseFrom( quartet(0) ) flatMap { id =>
-              Sequence.fromStringsPhred33( quartet(1), quartet(3) ) map { FASTQ(id,_) }
+              Sequence.fromStringsPhred33( quartet(1), quartet(3) ) map { FASTQ(id, _) }
             }
           }
           else None
