@@ -75,6 +75,7 @@ class FastqPreprocessing extends FunSuite {
             read
               .dropTrailingUnder(quality = 20)
               .dropWhileAverage(windowSize = 10, averageQuality = 35)
+              .longestSuffixOver(quality = 28)
           )
         }
         .filter(_.length >= 120)
