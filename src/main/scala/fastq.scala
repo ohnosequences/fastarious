@@ -269,7 +269,7 @@ case object fastq {
 
     def parseFastqPhred33: Iterator[Option[FASTQ]] =
       lines
-        .grouped(4)
+        .grouped(4).filter(_.size == 4) // grouped is broken
         .map { quartet =>
 
           if( quartet(2) startsWith "+" ) {

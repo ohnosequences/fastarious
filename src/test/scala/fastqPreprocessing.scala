@@ -59,19 +59,27 @@ class FastqPreprocessing extends FunSuite {
 
   test("sample preprocessing") {
 
-    val preprocessedReads =
+    val out = new File("preprocessed.fastq")
+    Files.deleteIfExists(out.toPath)
+
+    def preprocessedReads =
       reads
         .filter { read =>
           (read.quality.average >= 30) &&
           (read.numberOfNs <= 4)
         }
         .map { read =>
-          read
-            .dropTrailingUnder(quality = 20)
-            .dropWhileAverage(windowSize = 10, averageQuality = 25)
-            .longestSuffixOver(quality = 28)
+
+          FASTQ(
+            read.id,
+            read
+              .dropTrailingUnder(quality = 20)
+              .dropWhileAverage(windowSize = 10, averageQuality = 35)
+          )
         }
         .filter(_.length >= 120)
+
+    preprocessedReads appendAsPhred33To out
 
     println { s"Number of raw reads: ${reads.size}" }
     println { s"Number of valid reads: ${preprocessedReads.size}" }
