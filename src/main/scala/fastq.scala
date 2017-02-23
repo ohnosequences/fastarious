@@ -173,49 +173,53 @@ case object fastq {
     def fromPhred33(raw: String): Option[Quality] = {
 
       @annotation.tailrec
-      def rec(cs: String, acc: Seq[Int], errors: Boolean): Option[Quality] =
+      def rec(cs: String, acc: collection.mutable.Builder[Int,Vector[Int]], errors: Boolean): Option[Quality] =
         if(errors) { None } else {
 
-          if(cs.isEmpty) Some( Quality(acc) ) else {
+          if(cs.isEmpty) Some( Quality(acc.result) ) else {
 
             cs.head.toInt match {
-              case q if 33 <= q && q <= 126 => rec(cs.tail, acc :+ (q - 33), errors)
+              case q if 33 <= q && q <= 126 => rec(cs.tail, acc += (q - 33), errors)
               case _                        => rec(cs, acc, errors = true)
             }
           }
         }
 
-      rec(raw, Seq.empty, false)
+      val bldr = Vector.newBuilder[Int]; bldr.sizeHint(raw.length)
+      
+      rec(raw, bldr, false)
     }
 
     val toPhred33: Int => Char = { i => (i + 33).toChar }
   }
 
-  class Id private[fastarious] (val value: String) extends AnyVal {
+  case class Id private[fastarious] (val value: String) extends AnyVal {
 
     def asString: String =
       s"@${value}"
+
+    def isEmpty: Boolean =
+      value.isEmpty
   }
 
   case object Id {
 
-    private val isValid: String => Boolean = { raw =>
-      (raw startsWith "@") &&
-      !(raw contains "\n")
-    }
+    def from(raw: String): Id =
+      new Id(raw.filterNot(_ == '\n'))
 
-    def from(raw: String): Option[Id] = {
+    /*
+      ### Id parsing
 
-      // just *one* line
-      // FIXME: raw starts with several @, it will drop them all
-      val l = raw.filterNot(_ == '\n').dropWhile(_ == '@')
+      These methods are *not* for building Id values; for that use `from`.
+    */
+    private val isValid: String => Boolean =
+      _ startsWith "@"
 
-      if(l.nonEmpty) Some( new Id(l) ) else None
-    }
-
-    // FIXME: this passes the raw string (with @) to the constructor
+    /*
+      `parseFrom` will drop the *first* '@' in `raw`, if any. My understanding is that `@@hola` is a valid (albeit confusing) FASTQ id.
+    */
     def parseFrom(raw: String): Option[Id] =
-      if(isValid(raw)) Some( new Id(raw) ) else None
+      if(isValid(raw)) Some( new Id(raw.stripPrefix("@")) ) else None
   }
 
   case class FASTQ(val id: Id, val sequence: Sequence) {
@@ -235,21 +239,17 @@ case object fastq {
   case object FASTQ {
 
     def fromStringsPhred33(
-      id: String,
-      sequence: String,
-      quality: String
-    ): Option[FASTQ] = {
-
-      for {
-        i <- Id.from(id)
-        s <- Sequence.fromStringsPhred33(sequence, quality)
-      } yield FASTQ(i, s)
-    }
+      id        : String,
+      sequence  : String,
+      quality   : String
+    )
+    : Option[FASTQ] =
+      Sequence.fromStringsPhred33(sequence, quality) map { FASTQ( Id.from(id), _ ) }
   }
 
   implicit class FASTQIteratorOps(val fastqs: Iterator[FASTQ]) extends AnyVal {
 
-    def appendTo(file: File): File = {
+    def appendAsPhred33To(file: File): File = {
 
       if(fastqs.hasNext) {
         val wr = new BufferedWriter(new FileWriter(file, true))
@@ -269,17 +269,16 @@ case object fastq {
 
     def parseFastqPhred33: Iterator[Option[FASTQ]] =
       lines
-        .filterNot(_.isEmpty)
         .grouped(4)
         .map { quartet =>
 
-          if(quartet(3) != "+") None
-          else {
+          if( quartet(2) startsWith "+" ) {
             for {
-              i <- Id.from( quartet(0) ) // or .parseFrom?
+              i <- Id.parseFrom( quartet(0) )
               s <- Sequence.fromStringsPhred33( quartet(1), quartet(3) )
             } yield FASTQ(i, s)
           }
+          else None
         }
 
     def parseFastqPhred33DropErrors: Iterator[FASTQ] =

@@ -2,12 +2,27 @@ package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
 
-import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fastq._
-import java.nio.file.Files
+import java.nio.file._
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import java.io._
 
 class FastqTests extends FunSuite {
+
+  def lines(jFile: File): Iterator[String] =
+    Files.lines(jFile.toPath).iterator
+
+  test("FASTQ Id") {
+
+    assert { Id.from("@4aD#c buh boh") == Id("@4aD#c buh boh") }
+
+    val rawId = "@HWI323 asdf:3"
+    val wrongRawId = "Hola hola" // no '@'
+
+    assert { (Id parseFrom rawId) == Some( Id("HWI323 asdf:3") ) }
+    assert { (Id parseFrom wrongRawId) == None }
+  }
 
   test("can create FASTQ values") {
 
@@ -53,24 +68,39 @@ class FastqTests extends FunSuite {
     Files.deleteIfExists(fastqFile.toPath)
 
     val fastqs =
-      fq map { Iterator.fill(1000000)(_) }
+      fq map { Iterator.fill(1000)(_) }
 
-    fastqs foreach { _ appendTo fastqFile }
+    fastqs foreach { _ appendAsPhred33To fastqFile }
   }
 
   test("parsing from iterator") {
 
-    val fastaFile   = new File("test.fastq")
+    val fastqFile   = new File("test.fastq")
     val parsedFile  = new File("parsed.fastq")
     // Files.deleteIfExists(parsedFile.toPath)
+    // appendAsPhred33To parsedFile
+  }
 
-    import java.nio.file._
-    import scala.collection.JavaConversions._
+  test("parse and write from/to file") {
 
-    // WARNING this will leak file descriptors
-    val lines: Iterator[String] = Files.lines(fastaFile.toPath).iterator
+    val in  = new File("in.fastq")
+    val out = new File("out.fastq")
+    Files.deleteIfExists(out.toPath)
 
-    lines.parseFastqPhred33DropErrors appendTo parsedFile
+    lines(in).parseFastqPhred33DropErrors appendAsPhred33To out
+
+    assert { lines(in).toList == lines(out).toList }
+  }
+
+  test("read and write from/to file") {
+
+    val in  = new File("in.fastq")
+    val out = new File("out.fastq")
+    Files.deleteIfExists(out.toPath)
+
+    Files.write(out.toPath, lines(in).map({ x => x: CharSequence }).toIterable.asJava , StandardOpenOption. CREATE, StandardOpenOption.WRITE)
+
+    assert { lines(in).toList == lines(out).toList }
   }
 
   test("FASTQ quality") {
