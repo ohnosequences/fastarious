@@ -71,6 +71,7 @@ class FastqPreprocessing extends FunSuite {
             .dropWhileAverage(windowSize = 10, averageQuality = 25)
             .longestSuffixOver(quality = 28)
         }
+        .filter(_.length >= 120)
 
     println { s"Number of raw reads: ${reads.size}" }
     println { s"Number of valid reads: ${preprocessedReads.size}" }
