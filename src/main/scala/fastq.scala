@@ -165,7 +165,7 @@ case object fastq {
       if(value.isEmpty)
         0
       else
-        value.foldLeft(0: BigDecimal){ (acc, v) => acc + (v: BigDecimal) } / (value.length)
+        value.foldLeft(0: BigDecimal){ _ + _ } / (value.length)
   }
 
   case object Quality {
@@ -186,7 +186,7 @@ case object fastq {
         }
 
       val bldr = Vector.newBuilder[Int]; bldr.sizeHint(raw.length)
-      
+
       rec(raw, bldr, false)
     }
 
@@ -222,16 +222,16 @@ case object fastq {
       if(isValid(raw)) Some( new Id(raw.stripPrefix("@")) ) else None
   }
 
-  case class FASTQ(val id: Id, val sequence: Sequence) {
+  case class FASTQ(val id: Id, val value: Sequence) {
 
     def asStringPhred33: String = Seq(
       id.asString,
-      sequence.asStringPhred33
+      value.asStringPhred33
     ).mkString("\n")
 
     def toFASTA: FASTA.Value = FASTA(
       fasta.header( FastaHeader(id.value) )              ::
-      fasta.sequence( FastaSequence(sequence.sequence) ) ::
+      fasta.sequence( FastaSequence(value.sequence) ) ::
       *[AnyDenotation]
     )
   }

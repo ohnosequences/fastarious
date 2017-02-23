@@ -81,7 +81,7 @@ class FastqTests extends FunSuite {
     // appendAsPhred33To parsedFile
   }
 
-  test("parse and write from/to file") {
+  ignore("parse and write from/to file") {
 
     val in  = new File("in.fastq")
     val out = new File("out.fastq")
@@ -92,7 +92,7 @@ class FastqTests extends FunSuite {
     assert { lines(in).toList == lines(out).toList }
   }
 
-  test("read and write from/to file") {
+  ignore("read and write from/to file") {
 
     val in  = new File("in.fastq")
     val out = new File("out.fastq")
@@ -127,7 +127,7 @@ class FastqTests extends FunSuite {
 
     fqOpt foreach { fqq =>
 
-      val fq = fqq.sequence
+      val fq = fqq.value
 
       assert { (fq drop 3).length == fq.length - 3 }
       assert { (fq.slice(3, 6).length == (6 - 3) ) }
