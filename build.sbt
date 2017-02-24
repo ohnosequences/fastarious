@@ -5,7 +5,8 @@ description   := "fastarious project"
 bucketSuffix  := "era7.com"
 
 libraryDependencies ++= Seq(
-  "ohnosequences" %% "cosas" % "0.8.0"
+  "ohnosequences" %% "cosas" % "0.8.0",
+  "org.spire-math" %% "spire" % "0.13.0"
 )
 
 // NOTE should be reestablished
