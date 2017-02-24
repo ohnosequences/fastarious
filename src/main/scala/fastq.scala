@@ -3,6 +3,9 @@ package ohnosequences.fastarious
 import fasta._
 import ohnosequences.cosas._, types._, records._, fns._, klists._
 import java.io._
+import spire.algebra._
+import spire.math._
+import spire.implicits._
 
 case object fastq {
 
@@ -156,19 +159,36 @@ case object fastq {
         None
   }
 
-  case class  Quality private[fastarious] (val value: Seq[Int]) extends AnyVal {
+  /*
+    ## Quality
+
+    [Phred Quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), thus assumed to be positive.
+  */
+  case class Quality(val value: Seq[Int]) extends AnyVal {
 
     def toPhred33: String =
       (value map Quality.toPhred33).mkString
 
-    def average: BigDecimal =
+    def average: Real =
       if(value.isEmpty)
         0
       else
-        value.foldLeft(0: BigDecimal){ _ + _ } / (value.length)
+        value.foldLeft(0: Real){ _ + _ } / (value.length)
   }
 
   case object Quality {
+
+    implicit class ScoreConverters(val n: Int) extends AnyVal {
+
+      def asPhred33: Phred33Score =
+        Phred33Score(n)
+    }
+
+    case class Phred33Score(val n: Int) extends AnyVal {
+
+      def errorProbability: Real =
+        10 fpow ( -n / 10 )
+    }
 
     def fromPhred33(raw: String): Option[Quality] = {
 
@@ -193,19 +213,19 @@ case object fastq {
     val toPhred33: Int => Char = { i => (i + 33).toChar }
   }
 
+  /*
+    Here `value` is assumed to correspond to the real id, *without* the `@` character which would identify it in its serialized form. So, do *not* pass `"@HWI:2321"`, write instead `Id("HWI:2321")`
+  */
   case class Id private[fastarious] (val value: String) extends AnyVal {
 
     def asString: String =
-      s"@${value}"
+      s"@${value.filterNot(_ == '\n')}"
 
     def isEmpty: Boolean =
       value.isEmpty
   }
 
   case object Id {
-
-    def from(raw: String): Id =
-      new Id(raw.filterNot(_ == '\n'))
 
     /*
       ### Id parsing
@@ -244,7 +264,7 @@ case object fastq {
       quality   : String
     )
     : Option[FASTQ] =
-      Sequence.fromStringsPhred33(sequence, quality) map { FASTQ( Id.from(id), _ ) }
+      Sequence.fromStringsPhred33(sequence, quality) map { FASTQ( Id(id), _ ) }
   }
 
   implicit class FASTQIteratorOps(val fastqs: Iterator[FASTQ]) extends AnyVal {

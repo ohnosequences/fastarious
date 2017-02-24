@@ -6,6 +6,8 @@ import scala.collection.JavaConverters._
 import ohnosequences.fastarious._, fastq._
 import java.nio.file.Files
 import java.io._
+import spire.math._
+import spire.implicits._
 
 /*
   # Preprocessing examples
@@ -22,7 +24,7 @@ case object preprocessing {
     def dropTrailingUnder(quality: Int): Sequence =
       s dropWhileQuality { _ <= quality }
 
-    def dropWhileAverage(windowSize: Int, averageQuality: BigDecimal): Sequence = {
+    def dropWhileAverage(windowSize: Int, averageQuality: Real): Sequence = {
 
       def rec(acc: Sequence): Sequence =
         if(acc.isEmpty)
@@ -57,7 +59,7 @@ class FastqPreprocessing extends FunSuite {
 
   import preprocessing._
 
-  test("sample preprocessing") {
+  ignore("sample preprocessing") {
 
     val out = new File("preprocessed.fastq")
     Files.deleteIfExists(out.toPath)
@@ -81,10 +83,5 @@ class FastqPreprocessing extends FunSuite {
         .filter(_.length >= 120)
 
     preprocessedReads appendAsPhred33To out
-
-    println { s"Number of raw reads: ${reads.size}" }
-    println { s"Number of valid reads: ${preprocessedReads.size}" }
-
-
   }
 }

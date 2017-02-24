@@ -15,8 +15,6 @@ class FastqTests extends FunSuite {
 
   test("FASTQ Id") {
 
-    assert { Id.from("@4aD#c buh boh") == Id("@4aD#c buh boh") }
-
     val rawId = "@HWI323 asdf:3"
     val wrongRawId = "Hola hola" // no '@'
 
@@ -24,64 +22,17 @@ class FastqTests extends FunSuite {
     assert { (Id parseFrom wrongRawId) == None }
   }
 
-  test("can create FASTQ values") {
-
-    val i = "@HADFAQ!!:$#>#$@"
-    val rawSeq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
-    val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
-
-    val fq = FASTQ.fromStringsPhred33(
-      id        = i,
-      sequence  = rawSeq,
-      quality   = rawQual
-    )
-
-    assert { fq == None }
-  }
-
-  test("can parse fastq files") {
-
-    val input = new File("test.fastq")
-
-    import java.nio.file._
-    import scala.collection.JavaConversions._
-    // WARNING this will leak file descriptors
-    val lines: Iterator[String] = Files.lines(input.toPath).iterator
-    val buh = lines.parseFastqPhred33
-  }
-
-  test("generate fastq file") {
+  test("seq length ≠ qual length means none") {
 
     val i       = "@HADFAQ!!:$#>#$@"
-    val rawSeq  = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC"
+    // different length for seq and qual
+    val rawSeq  = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCA"
     val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
 
-    val fq = FASTQ.fromStringsPhred33(
-      id        = i,
-      sequence  = rawSeq,
-      quality   = rawQual
-    )
-
-    val fastqFile =
-      new File("test.fastq")
-
-    Files.deleteIfExists(fastqFile.toPath)
-
-    val fastqs =
-      fq map { Iterator.fill(1000)(_) }
-
-    fastqs foreach { _ appendAsPhred33To fastqFile }
+    assert { FASTQ.fromStringsPhred33(id = i, sequence = rawSeq, quality = rawQual) == None }
   }
 
-  test("parsing from iterator") {
-
-    val fastqFile   = new File("test.fastq")
-    val parsedFile  = new File("parsed.fastq")
-    // Files.deleteIfExists(parsedFile.toPath)
-    // appendAsPhred33To parsedFile
-  }
-
-  ignore("parse and write from/to file") {
+  test("parse and write from/to file is idempotent") {
 
     val in  = new File("in.fastq")
     val out = new File("out.fastq")
@@ -92,7 +43,7 @@ class FastqTests extends FunSuite {
     assert { lines(in).toList == lines(out).toList }
   }
 
-  ignore("read and write from/to file") {
+  test("raw read and write from/to file") {
 
     val in  = new File("in.fastq")
     val out = new File("out.fastq")
@@ -103,7 +54,7 @@ class FastqTests extends FunSuite {
     assert { lines(in).toList == lines(out).toList }
   }
 
-  test("FASTQ quality") {
+  test("FASTQ phred33 quality") {
 
     val rawQual = "$adF!#$DAFAFa5++0-afd324safd"
 
