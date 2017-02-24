@@ -254,6 +254,9 @@ case object fastq {
       fasta.sequence( FastaSequence(value.sequence) ) ::
       *[AnyDenotation]
     )
+
+    def updateSequence(f: Sequence => Sequence): FASTQ =
+      this.copy(value = f(this.value))
   }
 
   case object FASTQ {
