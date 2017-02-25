@@ -166,17 +166,28 @@ case object fastq {
   */
   case class Quality(val value: Seq[Int]) extends AnyVal {
 
+    import Quality._
+
     def toPhred33: String =
       (value map Quality.toPhred33).mkString
 
     def average: Real =
-      if(value.isEmpty)
-        0
-      else
-        value.foldLeft(0: Real){ _ + _ } / (value.length)
+      if(value.isEmpty) 0 else value.foldLeft(0: Real){ _ + _ } / (value.length)
+
+    // see for example https://doi.org/10.1093/bioinformatics/btv401
+    def expectedNumberOfErrors: BigDecimal =
+      value.foldLeft(0:BigDecimal)({ (acc,s) => acc + s.asPhred33.errorProbability })
   }
 
   case object Quality {
+
+    private def toProb(n: Int): BigDecimal =
+      BigDecimal(10) fpow ( BigDecimal(-n / 10) )
+
+    private def cacheProbs: Map[Int,BigDecimal] =
+      Map( (0 to 100).map { n => (n, toProb(n)) } : _*)
+
+    val phred33Cache = cacheProbs
 
     implicit class ScoreConverters(val n: Int) extends AnyVal {
 
@@ -186,8 +197,8 @@ case object fastq {
 
     case class Phred33Score(val n: Int) extends AnyVal {
 
-      def errorProbability: Real =
-        10 fpow ( -n / 10 )
+      def errorProbability: BigDecimal =
+        phred33Cache.getOrElse(n, toProb(n))
     }
 
     def fromPhred33(raw: String): Option[Quality] = {
