@@ -15,6 +15,7 @@ case object fastq {
     A fastq sequence has the sequence itself plus the corresponding quality. At construction, a `Sequence` is checked to have the same length for sequence and quality.
   */
   // TODO re-evaluate this design. Probably better to have Seq[(Char, Qual)] as primitive
+  // NOTE the *constructor* is private here, not the values.
   case class Sequence private[fastarious] (val sequence: String, val quality: Quality) {
 
     def isEmpty =
@@ -24,28 +25,31 @@ case object fastq {
       sequence.length
 
     def at(index: Int): Option[(Char, Int)] =
-      if(0 <= index && index <= length - 1)
-        Some( ( sequence(index), quality.value(index) ) )
-      else
-        None
+      if( index < 0 || (length - 1) < index) None else Some( ( sequence(index), quality.scores(index) ) )
+
+    def headOption: Option[(Char, Int)] =
+      if(isEmpty) None else Some { (sequence.head, quality.scores.head) }
+
+    def tailOption: Option[Sequence] =
+      if(isEmpty) None else Some { drop(1) }
 
     def drop(n: Int): Sequence =
-      Sequence( sequence drop n, Quality( quality.value drop n ) )
+      Sequence( sequence drop n, Quality( quality.scores drop n ) )
 
     def dropRight(n: Int): Sequence =
-      Sequence( sequence dropRight n, Quality( quality.value dropRight n ) )
+      Sequence( sequence dropRight n, Quality( quality.scores dropRight n ) )
 
     def slice(from: Int, until: Int): Sequence =
-      Sequence( sequence.slice(from, until), Quality( quality.value.slice(from, until) ) )
+      Sequence( sequence.slice(from, until), Quality( quality.scores.slice(from, until) ) )
 
     def take(n: Int): Sequence =
-      Sequence( sequence take n, Quality( quality.value take n ) )
+      Sequence( sequence take n, Quality( quality.scores take n ) )
 
     def takeRight(n: Int): Sequence =
-      Sequence( sequence takeRight n, Quality( quality.value takeRight n ) )
+      Sequence( sequence takeRight n, Quality( quality.scores takeRight n ) )
 
     def ++(other: Sequence): Sequence =
-      Sequence(sequence ++ other.sequence, Quality( quality.value ++ other.quality.value ))
+      Sequence(sequence ++ other.sequence, Quality( quality.scores ++ other.quality.scores ))
 
     def asStringPhred33: String = Seq(
       sequence,
@@ -64,7 +68,7 @@ case object fastq {
     */
     def filter(p: (Char, Int) => Boolean): Sequence = {
       val (seq, qual) =
-        (sequence zip quality.value)
+        (sequence zip quality.scores)
           .filter { case (c, q) => p(c, q) }
           .unzip
 
@@ -81,7 +85,7 @@ case object fastq {
       #### count
     */
     def count(p: (Char, Int) => Boolean): Int =
-      (sequence zip quality.value)
+      (sequence zip quality.scores)
         .count { case (c, q) => p(c, q) }
 
     def countSequence(p: Char => Boolean): Int =
@@ -95,7 +99,7 @@ case object fastq {
     */
     def takeWhile(p: (Char, Int) => Boolean): Sequence = {
       val (seq, qual) =
-        (sequence zip quality.value)
+        (sequence zip quality.scores)
           .takeWhile { case (c, q) => p(c, q) }
           .unzip
 
@@ -113,7 +117,7 @@ case object fastq {
     */
     def dropWhile(p: (Char, Int) => Boolean): Sequence = {
       val (seq, qual) =
-        (sequence zip quality.value)
+        (sequence zip quality.scores)
           .dropWhile { case (c, q) => p(c, q) }
           .unzip
 
@@ -131,7 +135,7 @@ case object fastq {
     */
     def span(p: (Char, Int) => Boolean): (Sequence, Sequence) = {
       val (sq1, sq2) =
-        (sequence zip quality.value)
+        (sequence zip quality.scores)
           .span { case (c, q) => p(c, q) }
 
       val (s1, q1) = sq1.unzip
@@ -164,41 +168,55 @@ case object fastq {
 
     [Phred Quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), thus assumed to be positive.
   */
-  case class Quality(val value: Seq[Int]) extends AnyVal {
+  case class Quality(val scores: Seq[Int]) extends AnyVal {
 
     import Quality._
 
     def toPhred33: String =
-      (value map Quality.toPhred33).mkString
-
-    def average: Real =
-      if(value.isEmpty) 0 else value.foldLeft(0: Real){ _ + _ } / (value.length)
+      (scores map Quality.toPhred33).mkString
 
     // see for example https://doi.org/10.1093/bioinformatics/btv401
-    def expectedNumberOfErrors: BigDecimal =
-      value.foldLeft(0:BigDecimal)({ (acc,s) => acc + s.asPhred33.errorProbability })
+    def expectedErrors: BigDecimal =
+      scores.foldLeft(0:BigDecimal)(
+        { (acc,s) => acc + s.asPhredScore.errorProbability }
+      )
+
+    def variance: BigDecimal =
+      scores.foldLeft(0:BigDecimal)(
+        { (acc,s) => acc + ( s.asPhredScore.errorProbability * s.asPhredScore.successProbability ) }
+      )
+
+    def maxScore: Int =
+      scores.max
+
+    def minScore: Int =
+      scores.min
   }
 
   case object Quality {
 
     private def toProb(n: Int): BigDecimal =
-      BigDecimal(10) fpow ( BigDecimal(-n / 10) )
+      BigDecimal(10) fpow ( - BigDecimal(n / 10) )
 
-    private def cacheProbs: Map[Int,BigDecimal] =
+    private def cacheProbs: Map[Int, BigDecimal] =
       Map( (0 to 100).map { n => (n, toProb(n)) } : _*)
 
-    val phred33Cache = cacheProbs
+    lazy val phred33Cache: Map[Int, BigDecimal] =
+      cacheProbs
 
     implicit class ScoreConverters(val n: Int) extends AnyVal {
 
-      def asPhred33: Phred33Score =
-        Phred33Score(n)
+      def asPhredScore: PhredScore =
+        PhredScore(n)
     }
 
-    case class Phred33Score(val n: Int) extends AnyVal {
+    case class PhredScore(val n: Int) extends AnyVal {
 
       def errorProbability: BigDecimal =
         phred33Cache.getOrElse(n, toProb(n))
+
+      def successProbability: BigDecimal =
+        1 - errorProbability
     }
 
     def fromPhred33(raw: String): Option[Quality] = {
@@ -221,7 +239,8 @@ case object fastq {
       rec(raw, bldr, false)
     }
 
-    val toPhred33: Int => Char = { i => (i + 33).toChar }
+    val toPhred33: Int => Char =
+      { i => (i + 33).toChar }
   }
 
   /*

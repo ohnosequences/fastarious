@@ -4,14 +4,13 @@ import org.scalatest.FunSuite
 
 import ohnosequences.fastarious._, fastq._
 import java.nio.file._
-import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import java.io._
 
 class FastqTests extends FunSuite {
 
   def lines(jFile: File): Iterator[String] =
-    Files.lines(jFile.toPath).iterator
+    Files.lines(jFile.toPath).iterator.asScala
 
   test("FASTQ Id") {
 
@@ -63,7 +62,7 @@ class FastqTests extends FunSuite {
 
     optQual foreach { q =>
       assert { q.toPhred33 == rawQual }
-      assert { q.value.forall { v => 0 <= v && v <= 93 } }
+      assert { q.scores.forall { v => 0 <= v && v <= 93 } }
     }
   }
 
