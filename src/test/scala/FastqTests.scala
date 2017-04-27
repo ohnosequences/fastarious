@@ -28,7 +28,7 @@ class FastqTests extends FunSuite {
     val rawSeq  = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCA"
     val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
 
-    assert { FASTQ.fromStringsPhred33(id = i, sequence = rawSeq, quality = rawQual) == None }
+    assert { FASTQ.fromStringsPhred33(id = i, letters = rawSeq, quality = rawQual) == None }
   }
 
   test("parse and write from/to file is idempotent") {
@@ -66,18 +66,18 @@ class FastqTests extends FunSuite {
     }
   }
 
-  test("FASTQ ops") {
+  test("FASTQ examples") {
 
     val fqOpt =
       FASTQ.fromStringsPhred33(
-        id        = "@HADFAQ!!:$#>#$@",
-        sequence  = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC",
-        quality   = "#$adF!#$DAFAFa5++0-afd324safd"
+        id      = "@HADFAQ!!:$#>#$@",
+        letters = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC",
+        quality = "#$adF!#$DAFAFa5++0-afd324safd"
       )
 
     fqOpt foreach { fqq =>
 
-      val fq = fqq.value
+      val fq = fqq.sequence
 
       assert { (fq drop 3).length == fq.length - 3 }
       assert { (fq.slice(3, 6).length == (6 - 3) ) }
