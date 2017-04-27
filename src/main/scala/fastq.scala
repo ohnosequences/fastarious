@@ -35,7 +35,7 @@ case object fastq {
       if(isValid(raw)) Some( new Id(raw.stripPrefix("@")) ) else None
   }
 
-  case class FASTQ(val id: Id, val sequence: Sequence) {
+  case class FASTQ(val id: Id, val sequence: SequenceQuality) {
 
     def asStringPhred33: String = Seq(
       id.asString,
@@ -48,7 +48,7 @@ case object fastq {
       *[AnyDenotation]
     )
 
-    def updateSequence(f: Sequence => Sequence): FASTQ =
+    def updateSequence(f: SequenceQuality => SequenceQuality): FASTQ =
       this.copy(sequence = f(this.sequence))
   }
 
@@ -60,7 +60,7 @@ case object fastq {
       quality : String
     )
     : Option[FASTQ] =
-      Sequence.fromStringsPhred33(letters, quality) map { FASTQ( Id(id), _ ) }
+      SequenceQuality.fromStringsPhred33(letters, quality) map { FASTQ( Id(id), _ ) }
   }
 
   implicit class FASTQIteratorOps(val fastqs: Iterator[FASTQ]) extends AnyVal {
@@ -91,7 +91,7 @@ case object fastq {
           if( quartet(2) startsWith "+" ) {
             for {
               i <- Id.parseFrom( quartet(0) )
-              s <- Sequence.fromStringsPhred33( quartet(1), quartet(3) )
+              s <- SequenceQuality.fromStringsPhred33( quartet(1), quartet(3) )
             } yield FASTQ(i, s)
           }
           else None
