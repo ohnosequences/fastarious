@@ -1,5 +1,7 @@
 package ohnosequences.fastarious
 
+import Sequence._
+
 /*
   ## Sequence
 
@@ -15,10 +17,10 @@ case class Sequence private[fastarious] (val letters: String, val quality: Quali
   def length: Int =
     letters.length
 
-  def at(index: Int): Option[(Char, Int)] =
+  def at(index: Int): Option[(Symbol, Score)] =
     if( index < 0 || (length - 1) < index) None else Some( ( letters(index), quality.scores(index) ) )
 
-  def headOption: Option[(Char, Int)] =
+  def headOption: Option[(Symbol, Score)] =
     if(isEmpty) None else Some { (letters.head, quality.scores.head) }
 
   def tailOption: Option[Sequence] =
@@ -57,7 +59,7 @@ case class Sequence private[fastarious] (val letters: String, val quality: Quali
   /*
     #### filter
   */
-  def filter(p: (Char, Int) => Boolean): Sequence = {
+  def filter(p: (Symbol, Score) => Boolean): Sequence = {
     val (seq, qual) =
       (letters zip quality.scores)
         .filter { case (c, q) => p(c, q) }
@@ -66,29 +68,29 @@ case class Sequence private[fastarious] (val letters: String, val quality: Quali
     Sequence(seq.mkString, Quality(qual))
   }
 
-  def filterSequence(p: Char => Boolean): Sequence =
+  def filterSequence(p: Symbol => Boolean): Sequence =
     filter { (s, _) => p(s) }
 
-  def filterQuality(p: Int => Boolean): Sequence =
+  def filterQuality(p: Score => Boolean): Sequence =
     filter { (_, q) => p(q) }
 
   /*
     #### count
   */
-  def count(p: (Char, Int) => Boolean): Int =
+  def count(p: (Symbol, Score) => Boolean): Int =
     (letters zip quality.scores)
       .count { case (c, q) => p(c, q) }
 
-  def countSequence(p: Char => Boolean): Int =
+  def countSequence(p: Symbol => Boolean): Int =
     count { (s, _) => p(s) }
 
-  def countQuality(p: Int => Boolean): Int =
+  def countQuality(p: Score => Boolean): Int =
     count { (_, q) => p(q) }
 
   /*
     #### takeWhile
   */
-  def takeWhile(p: (Char, Int) => Boolean): Sequence = {
+  def takeWhile(p: (Symbol, Score) => Boolean): Sequence = {
     val (seq, qual) =
       (letters zip quality.scores)
         .takeWhile { case (c, q) => p(c, q) }
@@ -97,16 +99,16 @@ case class Sequence private[fastarious] (val letters: String, val quality: Quali
     Sequence(seq.mkString, Quality(qual))
   }
 
-  def takeWhileQuality(p: Int => Boolean): Sequence =
+  def takeWhileQuality(p: Score => Boolean): Sequence =
     takeWhile { (_, q) => p(q) }
 
-  def takeWhileSequence(p: Char => Boolean): Sequence =
+  def takeWhileSequence(p: Symbol => Boolean): Sequence =
     takeWhile { (s, _) => p(s) }
 
   /*
     #### dropWhile
   */
-  def dropWhile(p: (Char, Int) => Boolean): Sequence = {
+  def dropWhile(p: (Symbol, Score) => Boolean): Sequence = {
     val (seq, qual) =
       (letters zip quality.scores)
         .dropWhile { case (c, q) => p(c, q) }
@@ -115,16 +117,16 @@ case class Sequence private[fastarious] (val letters: String, val quality: Quali
     Sequence(seq.mkString, Quality(qual))
   }
 
-  def dropWhileQuality(p: Int => Boolean): Sequence =
+  def dropWhileQuality(p: Score => Boolean): Sequence =
     dropWhile { (_, q) => p(q) }
 
-  def dropWhileSequence(p: Char => Boolean): Sequence =
+  def dropWhileSequence(p: Symbol => Boolean): Sequence =
     dropWhile { (s, _) => p(s) }
 
   /*
     #### span
   */
-  def span(p: (Char, Int) => Boolean): (Sequence, Sequence) = {
+  def span(p: (Symbol, Score) => Boolean): (Sequence, Sequence) = {
     val (sq1, sq2) =
       (letters zip quality.scores)
         .span { case (c, q) => p(c, q) }
@@ -138,14 +140,17 @@ case class Sequence private[fastarious] (val letters: String, val quality: Quali
     )
   }
 
-  def spanQuality(p: Int => Boolean): (Sequence, Sequence) =
+  def spanQuality(p: Score => Boolean): (Sequence, Sequence) =
     span { (_, q) => p(q) }
 
-  def spanSequence(p: Char => Boolean): (Sequence, Sequence) =
+  def spanSequence(p: Symbol => Boolean): (Sequence, Sequence) =
     span { (s, _) => p(s) }
 }
 
 case object Sequence {
+
+  type Symbol = Char
+  type Score  = Int
 
   def fromStringsPhred33(rawSeq: String, rawQual: String): Option[Sequence] =
     if(rawSeq.length == rawQual.length)
