@@ -10,6 +10,39 @@ import spire.implicits._
 */
 case class Quality private (val scores: Seq[Score]) extends AnyVal {
 
+  def isEmpty: Boolean =
+    scores.isEmpty
+
+  def length: Int =
+    scores.length
+
+  def at(index: Int): Option[Score] =
+    if( index < 0 || (length - 1) < index) None else Some( scores(index) )
+
+  def headOption: Option[Score] =
+    if(isEmpty) None else Some { scores.head }
+
+  def tailOption: Option[Quality] =
+    if(isEmpty) None else Some { drop(1) }
+
+  def drop(n: Int): Quality =
+    Quality( scores drop n )
+
+  def dropRight(n: Int): Quality =
+    Quality( scores dropRight n )
+
+  def slice(from: Int, until: Int): Quality =
+    Quality( scores.slice(from, until) )
+
+  def take(n: Int): Quality =
+    Quality( scores take n )
+
+  def takeRight(n: Int): Quality =
+    Quality( scores takeRight n )
+
+  def ++(other: Quality): Quality =
+    Quality(scores ++ other.scores )
+
   final
   def toPhred33: String =
     (scores map Quality.toPhred33).mkString

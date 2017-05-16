@@ -27,22 +27,22 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
     if(isEmpty) None else Some { drop(1) }
 
   def drop(n: Int): SequenceQuality =
-    SequenceQuality( sequence drop n, Quality( quality.scores drop n ) )
+    SequenceQuality( sequence drop n, quality drop n )
 
   def dropRight(n: Int): SequenceQuality =
-    SequenceQuality( sequence dropRight n, Quality( quality.scores dropRight n ) )
+    SequenceQuality( sequence dropRight n, quality dropRight n )
 
   def slice(from: Int, until: Int): SequenceQuality =
-    SequenceQuality( sequence.slice(from, until), Quality( quality.scores.slice(from, until) ) )
+    SequenceQuality( sequence.slice(from, until), quality.slice(from, until) )
 
   def take(n: Int): SequenceQuality =
-    SequenceQuality( sequence take n, Quality( quality.scores take n ) )
+    SequenceQuality( sequence take n, quality take n )
 
   def takeRight(n: Int): SequenceQuality =
-    SequenceQuality( sequence takeRight n, Quality( quality.scores takeRight n ) )
+    SequenceQuality( sequence takeRight n, quality takeRight n )
 
   def ++(other: SequenceQuality): SequenceQuality =
-    SequenceQuality(sequence ++ other.sequence, Quality( quality.scores ++ other.quality.scores ))
+    SequenceQuality( sequence ++ other.sequence, quality ++ other.quality )
 
   def asStringPhred33: String = Seq(
     sequence.letters,
