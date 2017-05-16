@@ -43,7 +43,7 @@ case object Quality {
 
   private final
   def errorProbability(n: Score): ErrorProbability =
-    BigDecimal(10) fpow ( - BigDecimal(n / 10) )
+    BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
 
   private final
   def cacheProbs: Map[Score, ErrorProbability] =
