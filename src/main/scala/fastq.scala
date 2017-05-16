@@ -44,7 +44,7 @@ case object fastq {
 
     def toFASTA: FASTA.Value = FASTA(
       fasta.header( FastaHeader(id.value) )             ::
-      fasta.sequence( FastaSequence(sequence.letters) ) ::
+      fasta.sequence( FastaSequence(sequence.sequence.letters) ) ::
       *[AnyDenotation]
     )
 
