@@ -5,8 +5,7 @@ import Sequence._
 /*
   ## Sequence
 */
-// NOTE the *constructor* is private here, not the value.
-case class Sequence private[fastarious] (val letters: String) extends AnyVal {
+case class Sequence(val letters: String) extends AnyVal {
 
   def isEmpty: Boolean =
     letters.isEmpty
@@ -43,6 +42,9 @@ case class Sequence private[fastarious] (val letters: String) extends AnyVal {
 
   def foldLeft[X](init: X)(op: (X,Symbol) => X): X =
     letters.foldLeft(init)(op)
+
+  def reverse: Sequence =
+    Sequence(letters.reverse)
 }
 
 case object Sequence {

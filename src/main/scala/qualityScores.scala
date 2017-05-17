@@ -8,7 +8,7 @@ import spire.implicits._
 
   [Phred Quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), thus assumed to be positive.
 */
-case class Quality private (val scores: Seq[Score]) extends AnyVal {
+case class Quality(val scores: Seq[Score]) extends AnyVal {
 
   def isEmpty: Boolean =
     scores.isEmpty
@@ -42,6 +42,9 @@ case class Quality private (val scores: Seq[Score]) extends AnyVal {
 
   def ++(other: Quality): Quality =
     Quality(scores ++ other.scores )
+
+  def reverse: Quality =
+    Quality(scores.reverse)
 
   final
   def toPhred33: String =
