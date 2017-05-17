@@ -40,6 +40,9 @@ case class Sequence private[fastarious] (val letters: String) extends AnyVal {
 
   def ++(other: Sequence): Sequence =
     Sequence(letters ++ other.letters )
+
+  def foldLeft[X](init: X)(op: (X,Symbol) => X): X =
+    letters.foldLeft(init)(op)
 }
 
 case object Sequence {
