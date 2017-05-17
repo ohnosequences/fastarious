@@ -44,6 +44,9 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def ++(other: SequenceQuality): SequenceQuality =
     SequenceQuality( sequence ++ other.sequence, quality ++ other.quality )
 
+  def reverse: SequenceQuality =
+    SequenceQuality( sequence.reverse, quality.reverse )
+
   def asStringPhred33: String = Seq(
     sequence.letters,
     "+",

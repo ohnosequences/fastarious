@@ -1,13 +1,7 @@
 package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
-
-import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fasta._
-import scala.collection.JavaConversions._
-import java.nio.file._
-import java.io._
-
 
 class QualityScores extends FunSuite {
 
