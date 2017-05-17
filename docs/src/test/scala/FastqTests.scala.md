@@ -4,78 +4,88 @@ package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
 
-import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fastq._
-import java.nio.file.Files
+import java.nio.file._
+import scala.collection.JavaConverters._
 import java.io._
 
 class FastqTests extends FunSuite {
 
-  test("can create FASTQ values") {
+  def lines(jFile: File): Iterator[String] =
+    Files.lines(jFile.toPath).iterator.asScala
 
-    val i = "@HADFAQ!!:$#>#$@"
-    val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
-    val p = "+hola soy una línea perdida!"
-    val qual = "#$adF!#$DAFAFa5++0-afd324safd"
+  test("FASTQ Id") {
 
-    val fq = FASTQ(
-      id(FastqId(i))                ::
-      sequence(FastqSequence(seq))  ::
-      plus(FastqPlus(p))            ::
-      quality(FastqQuality(qual))   ::
-      *[AnyDenotation]
-    )
+    val rawId = "@HWI323 asdf:3"
+    val wrongRawId = "Hola hola" // no '@'
+
+    assert { (Id parseFrom rawId) == Some( Id("HWI323 asdf:3") ) }
+    assert { (Id parseFrom wrongRawId) == None }
   }
 
-  test("can parse fastq files") {
+  test("seq length ≠ qual length means none") {
 
-    val input = new File("test.fastq")
+    val i       = "@HADFAQ!!:$#>#$@"
+    // different length for seq and qual
+    val rawSeq  = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCA"
+    val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
 
-    import java.nio.file._
-    import scala.collection.JavaConversions._
-    // WARNING this will leak file descriptors
-    val lines: Iterator[String] = Files.lines(input.toPath).iterator
-    val buh = lines.parseFastq()
+    assert { FASTQ.fromStringsPhred33(id = i, letters = rawSeq, quality = rawQual) == None }
   }
 
-  test("generate fastq file") {
+  test("parse and write from/to file is idempotent") {
 
-    val i = "@HADFAQ!!:$#>#$@"
-    val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
-    val p = "+hola soy una línea perdida!"
-    val qual = "#$adF!#$DAFAFa5++0-afd324safd"
+    val in  = new File("in.fastq")
+    val out = new File("out.fastq")
+    Files.deleteIfExists(out.toPath)
 
-    val fq = FASTQ(
-      id(FastqId(i))                ::
-      sequence(FastqSequence(seq))  ::
-      plus(FastqPlus(p))            ::
-      quality(FastqQuality(qual))   ::
-      *[AnyDenotation]
-    )
+    lines(in).parseFastqPhred33DropErrors appendAsPhred33To out
 
-    val fastqFile = new File("test.fastq")
-    Files.deleteIfExists(fastqFile.toPath)
-
-    val fastqs = Iterator.fill(10000)(fq)
-    fastqs appendTo fastqFile
+    assert { lines(in).toList == lines(out).toList }
   }
 
-  test("parsing from iterator") {
+  test("raw read and write from/to file") {
 
-    val fastaFile   = new File("test.fastq")
-    val parsedFile  = new File("parsed.fastq")
-    Files.deleteIfExists(parsedFile.toPath)
+    val in  = new File("in.fastq")
+    val out = new File("out.fastq")
+    Files.deleteIfExists(out.toPath)
 
-    import java.nio.file._
-    import scala.collection.JavaConversions._
+    Files.write(out.toPath, lines(in).map({ x => x: CharSequence }).toIterable.asJava , StandardOpenOption. CREATE, StandardOpenOption.WRITE)
 
-    // WARNING this will leak file descriptors
-    val lines: Iterator[String] = Files.lines(fastaFile.toPath).iterator
-
-    lines.parseFastqDropErrors() appendTo parsedFile
+    assert { lines(in).toList == lines(out).toList }
   }
 
+  test("FASTQ phred33 quality") {
 
+    val rawQual = "$adF!#$DAFAFa5++0-afd324safd"
+
+    val optQual =
+      Quality.fromPhred33(rawQual)
+
+    optQual foreach { q =>
+      assert { q.toPhred33 == rawQual }
+      assert { q.scores.forall { v => 0 <= v && v <= 93 } }
+    }
+  }
+
+  test("FASTQ examples") {
+
+    val fqOpt =
+      FASTQ.fromStringsPhred33(
+        id      = "@HADFAQ!!:$#>#$@",
+        letters = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC",
+        quality = "#$adF!#$DAFAFa5++0-afd324safd"
+      )
+
+    fqOpt foreach { fqq =>
+
+      val fq = fqq.sequence
+
+      assert { (fq drop 3).length == fq.length - 3 }
+      assert { (fq.slice(3, 6).length == (6 - 3) ) }
+      assert { fq.slice(3,6) == fq.drop(3).dropRight(fq.length - 6) }
+    }
+  }
 }
 
 ```
@@ -83,10 +93,17 @@ class FastqTests extends FunSuite {
 
 
 
+[test/scala/DNA.scala]: DNA.scala.md
+[test/scala/NcbiHeadersTests.scala]: NcbiHeadersTests.scala.md
+[test/scala/FastqTests.scala]: FastqTests.scala.md
+[test/scala/FastaTests.scala]: FastaTests.scala.md
+[test/scala/QualityScores.scala]: QualityScores.scala.md
+[main/scala/DNAQ.scala]: ../../main/scala/DNAQ.scala.md
+[main/scala/qualityScores.scala]: ../../main/scala/qualityScores.scala.md
+[main/scala/DNA.scala]: ../../main/scala/DNA.scala.md
 [main/scala/fasta.scala]: ../../main/scala/fasta.scala.md
 [main/scala/fastq.scala]: ../../main/scala/fastq.scala.md
-[main/scala/ncbiHeaders.scala]: ../../main/scala/ncbiHeaders.scala.md
+[main/scala/SequenceQuality.scala]: ../../main/scala/SequenceQuality.scala.md
 [main/scala/utils.scala]: ../../main/scala/utils.scala.md
-[test/scala/FastaTests.scala]: FastaTests.scala.md
-[test/scala/FastqTests.scala]: FastqTests.scala.md
-[test/scala/NcbiHeadersTests.scala]: NcbiHeadersTests.scala.md
+[main/scala/sequence.scala]: ../../main/scala/sequence.scala.md
+[main/scala/ncbiHeaders.scala]: ../../main/scala/ncbiHeaders.scala.md
