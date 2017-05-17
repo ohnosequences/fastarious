@@ -31,7 +31,7 @@ class FastqTests extends FunSuite {
     assert { FASTQ.fromStringsPhred33(id = i, letters = rawSeq, quality = rawQual) == None }
   }
 
-  ignore("parse and write from/to file is idempotent") {
+  test("parse and write from/to file is idempotent") {
 
     val in  = new File("in.fastq")
     val out = new File("out.fastq")
@@ -42,7 +42,7 @@ class FastqTests extends FunSuite {
     assert { lines(in).toList == lines(out).toList }
   }
 
-  ignore("raw read and write from/to file") {
+  test("raw read and write from/to file") {
 
     val in  = new File("in.fastq")
     val out = new File("out.fastq")
