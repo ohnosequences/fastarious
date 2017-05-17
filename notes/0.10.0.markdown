@@ -1,0 +1,13 @@
+Everyone should update.
+
+### Improvements
+
+- Sequence, Quality, and SequenceQuality types
+- FASTQ is much simpler now, being an ID plus a SequenceQuality
+- uniform methods for sequence and quality
+- complement for DNA-like sequences
+
+### Fixes
+
+- The error probabilities where approximated before; they are now fully precise
+- more and better tests
