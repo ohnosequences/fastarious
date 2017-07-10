@@ -41,11 +41,11 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def takeRight(n: Int): SequenceQuality =
     SequenceQuality( sequence takeRight n, quality takeRight n )
 
-  def :+(s: Symbol, q: Score): SequenceQuality =
-    SequenceQuality(sequence :+ s, quality :+ q)
+  def :+(qs: QSymbol): SequenceQuality =
+    SequenceQuality(sequence :+ qs.symbol, quality :+ qs.score)
 
-  def +:(s: Symbol, q: Score): SequenceQuality =
-    SequenceQuality(s +: sequence, q +: quality)
+  def +:(qs: QSymbol): SequenceQuality =
+    SequenceQuality(qs.symbol +: sequence, qs.score +: quality)
 
   def ++(other: SequenceQuality): SequenceQuality =
     SequenceQuality( sequence ++ other.sequence, quality ++ other.quality )
