@@ -17,11 +17,11 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def length: Int =
     sequence.length
 
-  def at(index: Int): Option[(Symbol, Score)] =
-    sequence.at(index) map { s => (s, quality.scores(index)) }
+  def at(index: Int): Option[QSymbol] =
+    sequence.at(index) map { s => QSymbol(s, quality.scores(index)) }
 
-  def headOption: Option[(Symbol, Score)] =
-    sequence.headOption map { s =>  (s, quality.scores.head) }
+  def headOption: Option[QSymbol] =
+    sequence.headOption map { s =>  QSymbol(s, quality.scores.head) }
 
   def tailOption: Option[SequenceQuality] =
     if(isEmpty) None else Some { drop(1) }
@@ -50,8 +50,8 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def ++(other: SequenceQuality): SequenceQuality =
     SequenceQuality( sequence ++ other.sequence, quality ++ other.quality )
 
-  def foldLeft[X](init: X)(op: (X,(Symbol,Score)) => X): X =
-    (sequence.letters zip quality.scores).foldLeft(init)(op)
+  def foldLeft[X](init: X)(op: (X,QSymbol) => X): X =
+    (sequence.letters zip quality.scores).foldLeft(init)({ case (x,(a,b)) => op(x,QSymbol(a,b)) })
 
   def reverse: SequenceQuality =
     SequenceQuality( sequence.reverse, quality.reverse )
@@ -71,77 +71,77 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   /*
     #### filter
   */
-  def filter(p: (Symbol, Score) => Boolean): SequenceQuality = {
+  def filter(p: QSymbol => Boolean): SequenceQuality = {
     val (seq, qual) =
       (sequence.letters zip quality.scores)
-        .filter { case (c, q) => p(c, q) }
+        .filter { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
     SequenceQuality(Sequence(seq.mkString), Quality(qual))
   }
 
   def filterSequence(p: Symbol => Boolean): SequenceQuality =
-    filter { (s, _) => p(s) }
+    filter { case QSymbol(s, _) => p(s) }
 
   def filterQuality(p: Score => Boolean): SequenceQuality =
-    filter { (_, q) => p(q) }
+    filter { case QSymbol(_, q) => p(q) }
 
   /*
     #### count
   */
-  def count(p: (Symbol, Score) => Boolean): Int =
+  def count(p: QSymbol => Boolean): Int =
     (sequence.letters zip quality.scores)
-      .count { case (c, q) => p(c, q) }
+      .count { case (c, q) => p(QSymbol(c, q)) }
 
   def countSequence(p: Symbol => Boolean): Int =
-    count { (s, _) => p(s) }
+    count { case QSymbol(s, _) => p(s) }
 
   def countQuality(p: Score => Boolean): Int =
-    count { (_, q) => p(q) }
+    count { case QSymbol(_, q) => p(q) }
 
   /*
     #### takeWhile
   */
-  def takeWhile(p: (Symbol, Score) => Boolean): SequenceQuality = {
+  def takeWhile(p: QSymbol => Boolean): SequenceQuality = {
     val (seq, qual) =
       (sequence.letters zip quality.scores)
-        .takeWhile { case (c, q) => p(c, q) }
+        .takeWhile { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
     SequenceQuality(Sequence(seq.mkString), Quality(qual))
   }
 
   def takeWhileQuality(p: Score => Boolean): SequenceQuality =
-    takeWhile { (_, q) => p(q) }
+    takeWhile { case QSymbol(_, q) => p(q) }
 
   def takeWhileSequence(p: Symbol => Boolean): SequenceQuality =
-    takeWhile { (s, _) => p(s) }
+    takeWhile { case QSymbol(s, _) => p(s) }
 
   /*
     #### dropWhile
   */
-  def dropWhile(p: (Symbol, Score) => Boolean): SequenceQuality = {
+  def dropWhile(p: QSymbol => Boolean): SequenceQuality = {
     val (seq, qual) =
       (sequence.letters zip quality.scores)
-        .dropWhile { case (c, q) => p(c, q) }
+        .dropWhile { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
     SequenceQuality(Sequence(seq.mkString), Quality(qual))
   }
 
   def dropWhileQuality(p: Score => Boolean): SequenceQuality =
-    dropWhile { (_, q) => p(q) }
+    dropWhile { case QSymbol(_, q) => p(q) }
 
   def dropWhileSequence(p: Symbol => Boolean): SequenceQuality =
-    dropWhile { (s, _) => p(s) }
+    dropWhile { case QSymbol(s, _) => p(s) }
 
   /*
     #### span
   */
-  def span(p: (Symbol, Score) => Boolean): (SequenceQuality, SequenceQuality) = {
+  def span(p: QSymbol => Boolean): (SequenceQuality, SequenceQuality) = {
     val (sq1, sq2) =
       (sequence.letters zip quality.scores)
-        .span { case (c, q) => p(c, q) }
+        .span { case (c, q) => p(QSymbol(c, q)) }
 
     val (s1, q1) = sq1.unzip
     val (s2, q2) = sq2.unzip
@@ -153,16 +153,13 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   }
 
   def spanQuality(p: Score => Boolean): (SequenceQuality, SequenceQuality) =
-    span { (_, q) => p(q) }
+    span { case QSymbol(_, q) => p(q) }
 
   def spanSequence(p: Symbol => Boolean): (SequenceQuality, SequenceQuality) =
-    span { (s, _) => p(s) }
+    span { case QSymbol(s, _) => p(s) }
 }
 
 case object SequenceQuality {
-
-  type Symbol = Char
-  type Score  = Int
 
   def fromStringsPhred33(rawSeq: String, rawQual: String): Option[SequenceQuality] =
     if(rawSeq.length == rawQual.length)
@@ -170,3 +167,6 @@ case object SequenceQuality {
     else
       None
 }
+
+case class QSymbol(val symbol: Symbol, val score: Score)
+case class PSymbol(val symbol: Symbol, val errorP: ErrorP)
