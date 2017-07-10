@@ -44,6 +44,9 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def ++(other: SequenceQuality): SequenceQuality =
     SequenceQuality( sequence ++ other.sequence, quality ++ other.quality )
 
+  def foldLeft[X](init: X)(op: (X,(Symbol,Score)) => X): X =
+    (sequence.letters zip quality.scores).foldLeft(init)(op)
+
   def reverse: SequenceQuality =
     SequenceQuality( sequence.reverse, quality.reverse )
 
