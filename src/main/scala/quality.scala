@@ -86,10 +86,11 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
 
 case object Quality {
 
+  final
   def scoreFrom(errP: ErrorP): Score =
     ((-10) * errP.log(10)).round().intValue
 
-  private final
+  final
   def errorProbability(n: Score): ErrorP =
     BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
 

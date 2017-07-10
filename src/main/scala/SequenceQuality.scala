@@ -56,6 +56,12 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def reverse: SequenceQuality =
     SequenceQuality( sequence.reverse, quality.reverse )
 
+  def qSymbols: Seq[QSymbol] =
+    (sequence.letters zip quality.scores) map { case (sy,sc) => QSymbol(sy,sc) }
+
+  def pSymbols: Seq[PSymbol] =
+    (sequence.letters zip quality.scores) map { case (sy,sc) => PSymbol(sy,Quality.errorProbability(sc)) }
+
   def asStringPhred33: String = Seq(
     sequence.letters,
     "+",
@@ -168,5 +174,14 @@ case object SequenceQuality {
       None
 }
 
-case class QSymbol(val symbol: Symbol, val score: Score)
-case class PSymbol(val symbol: Symbol, val errorP: ErrorP)
+case class QSymbol(val symbol: Symbol, val score: Score) {
+
+  def toPSymbol: PSymbol =
+    PSymbol(symbol, Quality.errorProbability(score))
+}
+
+case class PSymbol(val symbol: Symbol, val errorP: ErrorP) {
+
+  def toQSymbol: QSymbol =
+    QSymbol(symbol, Quality.scoreFrom(errorP))
+}
