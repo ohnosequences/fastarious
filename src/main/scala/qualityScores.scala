@@ -40,6 +40,12 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
   def takeRight(n: Int): Quality =
     Quality( scores takeRight n )
 
+  def :+(s: Score): Quality =
+    Quality(scores :+ s)
+
+  def +:(s: Score): Quality =
+    Quality(s +: scores)
+
   def ++(other: Quality): Quality =
     Quality(scores ++ other.scores )
 
