@@ -59,6 +59,9 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
   def toPhred33: String =
     (scores map Quality.toPhred33).mkString
 
+  final def errorPs: Seq[ErrorP] =
+    scores map errorProbability
+
   // see for example https://doi.org/10.1093/bioinformatics/btv401
   final
   def expectedErrors: BigDecimal =
@@ -83,18 +86,18 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
 
 case object Quality {
 
-  type Score            = Int
-  type ErrorProbability = BigDecimal
+  def scoreFrom(errP: ErrorP): Score =
+    ((-10) * errP.log(10)).round().intValue
 
   private final
-  def errorProbability(n: Score): ErrorProbability =
+  def errorProbability(n: Score): ErrorP =
     BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
 
   private final
-  def cacheProbs: Map[Score, ErrorProbability] =
+  def cacheProbs: Map[Score, ErrorP] =
     Map( (0 to 100).map { n => (n, errorProbability(n)) } : _*)
 
-  lazy val phred33Cache: Map[Score, ErrorProbability] =
+  lazy val phred33Cache: Map[Score, ErrorP] =
     cacheProbs
 
   implicit final
@@ -107,10 +110,10 @@ case object Quality {
   final case
   class PhredScore(val n: Score) extends AnyVal {
 
-    def errorProbability: ErrorProbability =
+    def errorProbability: ErrorP =
       phred33Cache.getOrElse(n, Quality.errorProbability(n))
 
-    def successProbability: ErrorProbability =
+    def successProbability: ErrorP =
       1 - errorProbability
   }
 
