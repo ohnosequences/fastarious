@@ -51,7 +51,7 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
     SequenceQuality( sequence ++ other.sequence, quality ++ other.quality )
 
   def foldLeft[X](init: X)(op: (X,QSymbol) => X): X =
-    (sequence.letters zip quality.scores).foldLeft(init)({ case (x,(a,b)) => op(x,QSymbol(a,b)) })
+    qSymbols.foldLeft(init)(op)
 
   def reverse: SequenceQuality =
     SequenceQuality( sequence.reverse, quality.reverse )
@@ -184,4 +184,7 @@ case class PSymbol(val symbol: Symbol, val errorP: ErrorP) {
 
   def toQSymbol: QSymbol =
     QSymbol(symbol, Quality.scoreFrom(errorP))
+
+  def successP: ErrorP = 
+    1 - errorP
 }
