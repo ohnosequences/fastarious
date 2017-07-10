@@ -49,6 +49,9 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
   def ++(other: Quality): Quality =
     Quality(scores ++ other.scores )
 
+  def foldLeft[X](init: X)(op: (X,Score) => X): X =
+    scores.foldLeft(init)(op)
+
   def reverse: Quality =
     Quality(scores.reverse)
 
