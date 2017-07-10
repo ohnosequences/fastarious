@@ -1,7 +1,5 @@
 package ohnosequences.fastarious
 
-import Sequence._
-
 /*
   ## Sequence
 */
@@ -51,9 +49,4 @@ case class Sequence(val letters: String) extends AnyVal {
 
   def reverse: Sequence =
     Sequence(letters.reverse)
-}
-
-case object Sequence {
-
-  type Symbol = Char
 }
