@@ -37,6 +37,12 @@ case class Sequence(val letters: String) extends AnyVal {
   def takeRight(n: Int): Sequence =
     Sequence( letters takeRight n )
 
+  def :+(s: Symbol): Sequence =
+    Sequence(letters :+ s)
+
+  def +:(s: Symbol): Sequence =
+    Sequence(s +: letters)
+
   def ++(other: Sequence): Sequence =
     Sequence(letters ++ other.letters )
 
