@@ -50,3 +50,9 @@ case class Sequence(val letters: String) extends AnyVal {
   def reverse: Sequence =
     Sequence(letters.reverse)
 }
+
+case object Sequence {
+
+  val empty: Sequence =
+    Sequence("")
+}

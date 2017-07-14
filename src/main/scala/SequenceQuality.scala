@@ -167,6 +167,9 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
 
 case object SequenceQuality {
 
+  val empty: SequenceQuality =
+    SequenceQuality(Sequence.empty, Quality.empty)
+
   def fromStringsPhred33(rawSeq: String, rawQual: String): Option[SequenceQuality] =
     if(rawSeq.length == rawQual.length)
       Quality.fromPhred33(rawQual).map( SequenceQuality(Sequence(rawSeq), _) )
@@ -185,6 +188,6 @@ case class PSymbol(val symbol: Symbol, val errorP: ErrorP) {
   def toQSymbol: QSymbol =
     QSymbol(symbol, Quality.scoreFrom(errorP))
 
-  def successP: ErrorP = 
+  def successP: ErrorP =
     1 - errorP
 }
