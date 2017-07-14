@@ -97,6 +97,9 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
 
 case object Quality {
 
+  val empty: Quality =
+    Quality(Seq.empty)
+
   final
   def scoreFrom(errP: ErrorP): Score =
     // ((-10) * errP.log(10)).round().intValue
