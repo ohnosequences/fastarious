@@ -5,4 +5,5 @@ package object fastarious {
   type Symbol   = Char
   type Score    = Int
   type ErrorP   = BigDecimal
+  type Prob     = BigDecimal
 }

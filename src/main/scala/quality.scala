@@ -59,8 +59,13 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
   def toPhred33: String =
     (scores map Quality.toPhred33).mkString
 
-  final def errorPs: Seq[ErrorP] =
+  final
+  def errorPs: Seq[ErrorP] =
     scores map errorProbability
+
+  final
+  def successPs: Seq[Prob] =
+    scores map successProbability
 
   // see for example https://doi.org/10.1093/bioinformatics/btv401
   final
@@ -93,6 +98,10 @@ case object Quality {
   final
   def errorProbability(n: Score): ErrorP =
     BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
+
+  final
+  def successProbability(n: Score): Prob =
+    1 - errorProbability(n)
 
   private final
   def cacheProbs: Map[Score, ErrorP] =
