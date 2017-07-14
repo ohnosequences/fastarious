@@ -1,0 +1,7 @@
+- add foldLeft to Quality, SequenceQuality
+- add append/prepend to Sequence, Quality, SequenceQuality
+- add a package object, type aliases
+- add a score to errorP conversion
+- add QSymbol, make SequenceQuality use it
+- add conversions to seqs of (P|Q)Symbols
+- switch to Double for Real numbers :(
