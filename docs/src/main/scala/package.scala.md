@@ -1,23 +1,14 @@
 
 ```scala
-package ohnosequences.fastarious
+package ohnosequences
 
-import DNA._
+package object fastarious {
 
-case object DNAQ {
-
-  implicit final
-  class DNAQSyntax(val seq: SequenceQuality) {
-
-    def asDNAQ: DNAQOps =
-      DNAQOps(seq)
-  }
-
-  case class DNAQOps(val seq: SequenceQuality) {
-
-    def complement: SequenceQuality =
-      SequenceQuality( seq.sequence.asDNA.complement, seq.quality )
-  }
+  type Symbol   = Char
+  type Score    = Int
+  type ErrorP   = Prob
+  type Prob     = Num
+  type Num      = Double
 }
 
 ```

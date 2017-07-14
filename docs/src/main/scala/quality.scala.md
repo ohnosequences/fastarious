@@ -45,8 +45,17 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
   def takeRight(n: Int): Quality =
     Quality( scores takeRight n )
 
+  def :+(s: Score): Quality =
+    Quality(scores :+ s)
+
+  def +:(s: Score): Quality =
+    Quality(s +: scores)
+
   def ++(other: Quality): Quality =
     Quality(scores ++ other.scores )
+
+  def foldLeft[X](init: X)(op: (X,Score) => X): X =
+    scores.foldLeft(init)(op)
 
   def reverse: Quality =
     Quality(scores.reverse)
@@ -55,17 +64,31 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
   def toPhred33: String =
     (scores map Quality.toPhred33).mkString
 
+  final
+  def errorPs: Seq[ErrorP] =
+    scores map errorProbability
+
+  final
+  def successPs: Seq[Prob] =
+    scores map successProbability
+
   // see for example https://doi.org/10.1093/bioinformatics/btv401
   final
-  def expectedErrors: BigDecimal =
-    scores.foldLeft(0:BigDecimal)(
-      { (acc,s) => acc + s.asPhredScore.errorProbability }
+  def expectedErrors: Num =
+    scores.foldLeft(0:Num)(
+      { (acc,s) => acc + errorProbability(s) }
     )
 
   final
-  def variance: BigDecimal =
-    scores.foldLeft(0:BigDecimal)(
-      { (acc,s) => acc + ( s.asPhredScore.errorProbability * s.asPhredScore.successProbability ) }
+  def expectedErrors_slow: Num =
+    scores.foldLeft(0:Num)(
+      { (acc,s) => acc + errorProbabilityImpl(s) }
+    )
+
+  final
+  def variance: Num =
+    scores.foldLeft(0:Num)(
+      { (acc,s) => acc + ( errorProbability(s) * successProbability(s) ) }
     )
 
   final
@@ -79,19 +102,28 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
 
 case object Quality {
 
-  type Score            = Int
-  type ErrorProbability = BigDecimal
+  final
+  def scoreFrom(errP: ErrorP): Score =
+    // ((-10) * errP.log(10)).round().intValue
+    Math.round((-10:Double) * errP.log(10)).toInt
+
+
+  final
+  def errorProbability(n: Score): ErrorP =
+    phred33ErrorPCache.getOrElse(n, errorProbabilityImpl(n))
 
   private final
-  def errorProbability(n: Score): ErrorProbability =
-    BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
+  def errorProbabilityImpl(n: Score): ErrorP =
+    // BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
+    (10:Double) fpow ( - ((n:Double) / 10) )
 
-  private final
-  def cacheProbs: Map[Score, ErrorProbability] =
-    Map( (0 to 100).map { n => (n, errorProbability(n)) } : _*)
 
-  lazy val phred33Cache: Map[Score, ErrorProbability] =
-    cacheProbs
+  final
+  def successProbability(n: Score): Prob =
+    1 - errorProbability(n)
+
+  lazy val phred33ErrorPCache: Map[Score, ErrorP] =
+    Map( (0 to 1000).map { n => (n, errorProbabilityImpl(n)) } : _*)
 
   implicit final
   class ScoreConverters(val n: Score) extends AnyVal {
@@ -103,10 +135,10 @@ case object Quality {
   final case
   class PhredScore(val n: Score) extends AnyVal {
 
-    def errorProbability: ErrorProbability =
-      phred33Cache.getOrElse(n, Quality.errorProbability(n))
+    def errorProbability: ErrorP =
+      Quality.errorProbability(n)
 
-    def successProbability: ErrorProbability =
+    def successProbability: ErrorP =
       1 - errorProbability
   }
 
@@ -147,8 +179,9 @@ case object Quality {
 [test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
 [test/scala/QualityScores.scala]: ../../test/scala/QualityScores.scala.md
 [main/scala/DNAQ.scala]: DNAQ.scala.md
-[main/scala/qualityScores.scala]: qualityScores.scala.md
+[main/scala/quality.scala]: quality.scala.md
 [main/scala/DNA.scala]: DNA.scala.md
+[main/scala/package.scala]: package.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
 [main/scala/SequenceQuality.scala]: SequenceQuality.scala.md

@@ -1,8 +1,6 @@
 
 ```scala
 package ohnosequences.fastarious
-
-import Sequence._
 ```
 
 
@@ -42,6 +40,12 @@ case class Sequence(val letters: String) extends AnyVal {
   def takeRight(n: Int): Sequence =
     Sequence( letters takeRight n )
 
+  def :+(s: Symbol): Sequence =
+    Sequence(letters :+ s)
+
+  def +:(s: Symbol): Sequence =
+    Sequence(s +: letters)
+
   def ++(other: Sequence): Sequence =
     Sequence(letters ++ other.letters )
 
@@ -50,11 +54,6 @@ case class Sequence(val letters: String) extends AnyVal {
 
   def reverse: Sequence =
     Sequence(letters.reverse)
-}
-
-case object Sequence {
-
-  type Symbol = Char
 }
 
 ```
@@ -68,8 +67,9 @@ case object Sequence {
 [test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
 [test/scala/QualityScores.scala]: ../../test/scala/QualityScores.scala.md
 [main/scala/DNAQ.scala]: DNAQ.scala.md
-[main/scala/qualityScores.scala]: qualityScores.scala.md
+[main/scala/quality.scala]: quality.scala.md
 [main/scala/DNA.scala]: DNA.scala.md
+[main/scala/package.scala]: package.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
 [main/scala/SequenceQuality.scala]: SequenceQuality.scala.md
