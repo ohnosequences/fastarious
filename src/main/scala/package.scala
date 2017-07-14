@@ -4,6 +4,7 @@ package object fastarious {
 
   type Symbol   = Char
   type Score    = Int
-  type ErrorP   = BigDecimal
-  type Prob     = BigDecimal
+  type ErrorP   = Prob
+  type Prob     = Num
+  type Num      = Double
 }

@@ -69,15 +69,21 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
 
   // see for example https://doi.org/10.1093/bioinformatics/btv401
   final
-  def expectedErrors: BigDecimal =
-    scores.foldLeft(0:BigDecimal)(
-      { (acc,s) => acc + s.asPhredScore.errorProbability }
+  def expectedErrors: Num =
+    scores.foldLeft(0:Num)(
+      { (acc,s) => acc + errorProbability(s) }
     )
 
   final
-  def variance: BigDecimal =
-    scores.foldLeft(0:BigDecimal)(
-      { (acc,s) => acc + ( s.asPhredScore.errorProbability * s.asPhredScore.successProbability ) }
+  def expectedErrors_slow: Num =
+    scores.foldLeft(0:Num)(
+      { (acc,s) => acc + errorProbabilityImpl(s) }
+    )
+
+  final
+  def variance: Num =
+    scores.foldLeft(0:Num)(
+      { (acc,s) => acc + ( errorProbability(s) * successProbability(s) ) }
     )
 
   final
@@ -93,22 +99,26 @@ case object Quality {
 
   final
   def scoreFrom(errP: ErrorP): Score =
-    ((-10) * errP.log(10)).round().intValue
+    // ((-10) * errP.log(10)).round().intValue
+    Math.round((-10:Double) * errP.log(10)).toInt
+
 
   final
   def errorProbability(n: Score): ErrorP =
-    BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
+    phred33ErrorPCache.getOrElse(n, errorProbabilityImpl(n))
+
+  private final
+  def errorProbabilityImpl(n: Score): ErrorP =
+    // BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
+    (10:Double) fpow ( - ((n:Double) / 10) )
+
 
   final
   def successProbability(n: Score): Prob =
     1 - errorProbability(n)
 
-  private final
-  def cacheProbs: Map[Score, ErrorP] =
-    Map( (0 to 100).map { n => (n, errorProbability(n)) } : _*)
-
-  lazy val phred33Cache: Map[Score, ErrorP] =
-    cacheProbs
+  lazy val phred33ErrorPCache: Map[Score, ErrorP] =
+    Map( (0 to 1000).map { n => (n, errorProbabilityImpl(n)) } : _*)
 
   implicit final
   class ScoreConverters(val n: Score) extends AnyVal {
@@ -121,7 +131,7 @@ case object Quality {
   class PhredScore(val n: Score) extends AnyVal {
 
     def errorProbability: ErrorP =
-      phred33Cache.getOrElse(n, Quality.errorProbability(n))
+      Quality.errorProbability(n)
 
     def successProbability: ErrorP =
       1 - errorProbability
