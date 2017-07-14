@@ -22,11 +22,11 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def length: Int =
     sequence.length
 
-  def at(index: Int): Option[(Symbol, Score)] =
-    sequence.at(index) map { s => (s, quality.scores(index)) }
+  def at(index: Int): Option[QSymbol] =
+    sequence.at(index) map { s => QSymbol(s, quality.scores(index)) }
 
-  def headOption: Option[(Symbol, Score)] =
-    sequence.headOption map { s =>  (s, quality.scores.head) }
+  def headOption: Option[QSymbol] =
+    sequence.headOption map { s =>  QSymbol(s, quality.scores.head) }
 
   def tailOption: Option[SequenceQuality] =
     if(isEmpty) None else Some { drop(1) }
@@ -46,11 +46,26 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def takeRight(n: Int): SequenceQuality =
     SequenceQuality( sequence takeRight n, quality takeRight n )
 
+  def :+(qs: QSymbol): SequenceQuality =
+    SequenceQuality(sequence :+ qs.symbol, quality :+ qs.score)
+
+  def +:(qs: QSymbol): SequenceQuality =
+    SequenceQuality(qs.symbol +: sequence, qs.score +: quality)
+
   def ++(other: SequenceQuality): SequenceQuality =
     SequenceQuality( sequence ++ other.sequence, quality ++ other.quality )
 
+  def foldLeft[X](init: X)(op: (X,QSymbol) => X): X =
+    qSymbols.foldLeft(init)(op)
+
   def reverse: SequenceQuality =
     SequenceQuality( sequence.reverse, quality.reverse )
+
+  def qSymbols: Seq[QSymbol] =
+    (sequence.letters zip quality.scores) map { case (sy,sc) => QSymbol(sy,sc) }
+
+  def pSymbols: Seq[PSymbol] =
+    (sequence.letters zip quality.scores) map { case (sy,sc) => PSymbol(sy,Quality.errorProbability(sc)) }
 
   def asStringPhred33: String = Seq(
     sequence.letters,
@@ -69,20 +84,20 @@ All these methods (filter, takeWhile/dropWhile, etc) take a predicate on *both* 
 
 
 ```scala
-  def filter(p: (Symbol, Score) => Boolean): SequenceQuality = {
+  def filter(p: QSymbol => Boolean): SequenceQuality = {
     val (seq, qual) =
       (sequence.letters zip quality.scores)
-        .filter { case (c, q) => p(c, q) }
+        .filter { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
     SequenceQuality(Sequence(seq.mkString), Quality(qual))
   }
 
   def filterSequence(p: Symbol => Boolean): SequenceQuality =
-    filter { (s, _) => p(s) }
+    filter { case QSymbol(s, _) => p(s) }
 
   def filterQuality(p: Score => Boolean): SequenceQuality =
-    filter { (_, q) => p(q) }
+    filter { case QSymbol(_, q) => p(q) }
 ```
 
 
@@ -90,15 +105,15 @@ All these methods (filter, takeWhile/dropWhile, etc) take a predicate on *both* 
 
 
 ```scala
-  def count(p: (Symbol, Score) => Boolean): Int =
+  def count(p: QSymbol => Boolean): Int =
     (sequence.letters zip quality.scores)
-      .count { case (c, q) => p(c, q) }
+      .count { case (c, q) => p(QSymbol(c, q)) }
 
   def countSequence(p: Symbol => Boolean): Int =
-    count { (s, _) => p(s) }
+    count { case QSymbol(s, _) => p(s) }
 
   def countQuality(p: Score => Boolean): Int =
-    count { (_, q) => p(q) }
+    count { case QSymbol(_, q) => p(q) }
 ```
 
 
@@ -106,20 +121,20 @@ All these methods (filter, takeWhile/dropWhile, etc) take a predicate on *both* 
 
 
 ```scala
-  def takeWhile(p: (Symbol, Score) => Boolean): SequenceQuality = {
+  def takeWhile(p: QSymbol => Boolean): SequenceQuality = {
     val (seq, qual) =
       (sequence.letters zip quality.scores)
-        .takeWhile { case (c, q) => p(c, q) }
+        .takeWhile { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
     SequenceQuality(Sequence(seq.mkString), Quality(qual))
   }
 
   def takeWhileQuality(p: Score => Boolean): SequenceQuality =
-    takeWhile { (_, q) => p(q) }
+    takeWhile { case QSymbol(_, q) => p(q) }
 
   def takeWhileSequence(p: Symbol => Boolean): SequenceQuality =
-    takeWhile { (s, _) => p(s) }
+    takeWhile { case QSymbol(s, _) => p(s) }
 ```
 
 
@@ -127,20 +142,20 @@ All these methods (filter, takeWhile/dropWhile, etc) take a predicate on *both* 
 
 
 ```scala
-  def dropWhile(p: (Symbol, Score) => Boolean): SequenceQuality = {
+  def dropWhile(p: QSymbol => Boolean): SequenceQuality = {
     val (seq, qual) =
       (sequence.letters zip quality.scores)
-        .dropWhile { case (c, q) => p(c, q) }
+        .dropWhile { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
     SequenceQuality(Sequence(seq.mkString), Quality(qual))
   }
 
   def dropWhileQuality(p: Score => Boolean): SequenceQuality =
-    dropWhile { (_, q) => p(q) }
+    dropWhile { case QSymbol(_, q) => p(q) }
 
   def dropWhileSequence(p: Symbol => Boolean): SequenceQuality =
-    dropWhile { (s, _) => p(s) }
+    dropWhile { case QSymbol(s, _) => p(s) }
 ```
 
 
@@ -148,10 +163,10 @@ All these methods (filter, takeWhile/dropWhile, etc) take a predicate on *both* 
 
 
 ```scala
-  def span(p: (Symbol, Score) => Boolean): (SequenceQuality, SequenceQuality) = {
+  def span(p: QSymbol => Boolean): (SequenceQuality, SequenceQuality) = {
     val (sq1, sq2) =
       (sequence.letters zip quality.scores)
-        .span { case (c, q) => p(c, q) }
+        .span { case (c, q) => p(QSymbol(c, q)) }
 
     val (s1, q1) = sq1.unzip
     val (s2, q2) = sq2.unzip
@@ -163,22 +178,34 @@ All these methods (filter, takeWhile/dropWhile, etc) take a predicate on *both* 
   }
 
   def spanQuality(p: Score => Boolean): (SequenceQuality, SequenceQuality) =
-    span { (_, q) => p(q) }
+    span { case QSymbol(_, q) => p(q) }
 
   def spanSequence(p: Symbol => Boolean): (SequenceQuality, SequenceQuality) =
-    span { (s, _) => p(s) }
+    span { case QSymbol(s, _) => p(s) }
 }
 
 case object SequenceQuality {
-
-  type Symbol = Char
-  type Score  = Int
 
   def fromStringsPhred33(rawSeq: String, rawQual: String): Option[SequenceQuality] =
     if(rawSeq.length == rawQual.length)
       Quality.fromPhred33(rawQual).map( SequenceQuality(Sequence(rawSeq), _) )
     else
       None
+}
+
+case class QSymbol(val symbol: Symbol, val score: Score) {
+
+  def toPSymbol: PSymbol =
+    PSymbol(symbol, Quality.errorProbability(score))
+}
+
+case class PSymbol(val symbol: Symbol, val errorP: ErrorP) {
+
+  def toQSymbol: QSymbol =
+    QSymbol(symbol, Quality.scoreFrom(errorP))
+
+  def successP: ErrorP = 
+    1 - errorP
 }
 
 ```
@@ -192,8 +219,9 @@ case object SequenceQuality {
 [test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
 [test/scala/QualityScores.scala]: ../../test/scala/QualityScores.scala.md
 [main/scala/DNAQ.scala]: DNAQ.scala.md
-[main/scala/qualityScores.scala]: qualityScores.scala.md
+[main/scala/quality.scala]: quality.scala.md
 [main/scala/DNA.scala]: DNA.scala.md
+[main/scala/package.scala]: package.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
 [main/scala/SequenceQuality.scala]: SequenceQuality.scala.md
