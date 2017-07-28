@@ -39,10 +39,10 @@ class FastqTests extends FunSuite {
 
     lines(in).parseFastqPhred33DropErrors appendAsPhred33To out
 
-    assert { lines(in).toList == lines(out).toList }
+    (lines(in) zip lines(out)).foreach { case (l1,l2) => assert { l1 == l2 } }
   }
 
-  test("raw read and write from/to file") {
+  ignore("raw read and write from/to file") {
 
     val in  = new File("in.fastq")
     val out = new File("out.fastq")
@@ -50,7 +50,7 @@ class FastqTests extends FunSuite {
 
     Files.write(out.toPath, lines(in).map({ x => x: CharSequence }).toIterable.asJava , StandardOpenOption. CREATE, StandardOpenOption.WRITE)
 
-    assert { lines(in).toList == lines(out).toList }
+    (lines(in) zip lines(out)).foreach { case (l1,l2) => assert { l1 == l2 } }
   }
 
   test("FASTQ phred33 quality") {
@@ -70,7 +70,7 @@ class FastqTests extends FunSuite {
 
     val fqOpt =
       FASTQ.fromStringsPhred33(
-        id      = "@HADFAQ!!:$#>#$@",
+        id      = "HADFAQ!!:$#>#$@",
         letters = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC",
         quality = "#$adF!#$DAFAFa5++0-afd324safd"
       )
@@ -82,6 +82,8 @@ class FastqTests extends FunSuite {
       assert { (fq drop 3).length == fq.length - 3 }
       assert { (fq.slice(3, 6).length == (6 - 3) ) }
       assert { fq.slice(3,6) == fq.drop(3).dropRight(fq.length - 6) }
+
+      println(fqq.phred33.mkString)
     }
   }
 }

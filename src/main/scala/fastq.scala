@@ -37,6 +37,22 @@ case object fastq {
 
   case class FASTQ(val id: Id, val sequence: SequenceQuality) {
 
+    def phred33: Array[Char] = {
+        val res = Array.fill[Char](2*sequence.length + id.value.length + 4 + 2)(' ')
+
+        res.update(0,'@')
+        System.arraycopy(id.value.toCharArray, 0, res, 1, id.value.length)
+        res.update(1 + id.value.length, '\n')
+        System.arraycopy(sequence.sequence.letters, 0, res, 2 + id.value.length, sequence.length)
+        res.update(2 + id.value.length + sequence.length, '\n')
+        res.update(3 + id.value.length + sequence.length, '+')
+        res.update(4 + id.value.length + sequence.length, '\n')
+        System.arraycopy(sequence.quality.toPhred33.toCharArray, 0, res, 5 + id.value.length + sequence.length, sequence.length)
+        res.update(5 + id.value.length + 2*sequence.length, '\n')
+
+        res
+      }
+
     def asStringPhred33: String = Seq(
       id.asString,
       sequence.asStringPhred33
@@ -44,7 +60,7 @@ case object fastq {
 
     def toFASTA: FASTA.Value = FASTA(
       fasta.header( FastaHeader(id.value) )             ::
-      fasta.sequence( FastaSequence(sequence.sequence.letters) ) ::
+      fasta.sequence( FastaSequence(sequence.sequence.letters.mkString) ) ::
       *[AnyDenotation]
     )
 
@@ -60,7 +76,7 @@ case object fastq {
       quality : String
     )
     : Option[FASTQ] =
-      SequenceQuality.fromStringsPhred33(letters, quality) map { FASTQ( Id(id), _ ) }
+      SequenceQuality.fromStringsPhred33(letters.toCharArray, quality) map { FASTQ( Id(id), _ ) }
   }
 
   implicit class FASTQIteratorOps(val fastqs: Iterator[FASTQ]) extends AnyVal {
@@ -68,12 +84,12 @@ case object fastq {
     def appendAsPhred33To(file: File): File = {
 
       if(fastqs.hasNext) {
-        val wr = new BufferedWriter(new FileWriter(file, true))
 
-        fastqs.foreach { fq =>
-          wr.write( fq.asStringPhred33 )
-          wr.newLine
-        }
+        val wr =
+          new BufferedWriter(new FileWriter(file, true))
+
+        while(fastqs.hasNext) { wr write fastqs.next.phred33 }
+
         wr.close
       }
 
@@ -91,7 +107,7 @@ case object fastq {
           if( quartet(2) startsWith "+" ) {
             for {
               i <- Id.parseFrom( quartet(0) )
-              s <- SequenceQuality.fromStringsPhred33( quartet(1), quartet(3) )
+              s <- SequenceQuality.fromStringsPhred33( quartet(1).toCharArray, quartet(3) )
             } yield FASTQ(i, s)
           }
           else None

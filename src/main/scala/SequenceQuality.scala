@@ -63,7 +63,7 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
     (sequence.letters zip quality.scores) map { case (sy,sc) => PSymbol(sy,Quality.errorProbability(sc)) }
 
   def asStringPhred33: String = Seq(
-    sequence.letters,
+    new String(sequence.letters),
     "+",
     quality.toPhred33
   ).mkString("\n")
@@ -83,7 +83,7 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
         .filter { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
-    SequenceQuality(Sequence(seq.mkString), Quality(qual))
+    SequenceQuality(Sequence(seq), Quality(qual))
   }
 
   def filterSequence(p: Symbol => Boolean): SequenceQuality =
@@ -114,7 +114,7 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
         .takeWhile { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
-    SequenceQuality(Sequence(seq.mkString), Quality(qual))
+    SequenceQuality(Sequence(seq), Quality(qual))
   }
 
   def takeWhileQuality(p: Score => Boolean): SequenceQuality =
@@ -132,7 +132,7 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
         .dropWhile { case (c, q) => p(QSymbol(c, q)) }
         .unzip
 
-    SequenceQuality(Sequence(seq.mkString), Quality(qual))
+    SequenceQuality(Sequence(seq), Quality(qual))
   }
 
   def dropWhileQuality(p: Score => Boolean): SequenceQuality =
@@ -153,8 +153,8 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
     val (s2, q2) = sq2.unzip
 
     (
-      SequenceQuality(Sequence(s1.mkString), Quality(q1)),
-      SequenceQuality(Sequence(s2.mkString), Quality(q2))
+      SequenceQuality(Sequence(s1), Quality(q1)),
+      SequenceQuality(Sequence(s2), Quality(q2))
     )
   }
 
@@ -170,7 +170,7 @@ case object SequenceQuality {
   val empty: SequenceQuality =
     SequenceQuality(Sequence.empty, Quality.empty)
 
-  def fromStringsPhred33(rawSeq: String, rawQual: String): Option[SequenceQuality] =
+  def fromStringsPhred33(rawSeq: Array[Char], rawQual: String): Option[SequenceQuality] =
     if(rawSeq.length == rawQual.length)
       Quality.fromPhred33(rawQual).map( SequenceQuality(Sequence(rawSeq), _) )
     else
