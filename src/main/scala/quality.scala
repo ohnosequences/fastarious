@@ -1,7 +1,6 @@
 package ohnosequences.fastarious
 
 import Quality._
-import spire.implicits._
 
 /*
   ## Quality
@@ -102,9 +101,7 @@ case object Quality {
 
   final
   def scoreFrom(errP: ErrorP): Score =
-    // ((-10) * errP.log(10)).round().intValue
-    Math.round((-10:Double) * errP.log(10)).toInt
-
+    Math.round( -10 * Math.log10(errP) ).toInt
 
   final
   def errorProbability(n: Score): ErrorP =
@@ -112,9 +109,7 @@ case object Quality {
 
   private final
   def errorProbabilityImpl(n: Score): ErrorP =
-    // BigDecimal(10) fpow ( - (BigDecimal(n) / 10) )
-    (10:Double) fpow ( - ((n:Double) / 10) )
-
+    Math.pow(10, -(n: Double) / 10)
 
   final
   def successProbability(n: Score): Prob =
