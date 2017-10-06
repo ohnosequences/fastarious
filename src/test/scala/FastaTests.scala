@@ -1,15 +1,22 @@
 package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
-
 import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fasta._
-import scala.collection.JavaConverters._
 import java.nio.file._
 import java.io._
 
-
 class FastaTests extends FunSuite {
+
+  def testFasta(): File = new File(
+    this.getClass.getResource("/test.fasta").getPath
+  )
+
+  def testOut(): File = {
+    val out = new File("target/test-out.fasta")
+    Files.deleteIfExists(out.toPath)
+    out
+  }
 
   ignore("can create FASTA values") {
 
@@ -73,9 +80,7 @@ class FastaTests extends FunSuite {
 
 
   test("generate fasta file") {
-
-    val fastaFile = new File("test.fasta")
-    Files.deleteIfExists(fastaFile.toPath)
+    val out = testOut()
 
     val id = FastaHeader("id|12312312 una secuencia cualquiera")
     val randomLines = FastaSequence("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCCCCCCTTCTACACTCCCCCCCCCCCACATGGTCATTTCTACACACCCCCCCCCCCCCCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGCATCCCTACATATACTTCTCGTCATACTCATACATACACCCCCCCCCCCACAGGGGTCCATACAAAGGGCTTATATCCCCACGGGTCTTTTTCACTTCATATTTTTGGGGGCCTCGCGCGCCCTTAC")
@@ -89,20 +94,16 @@ class FastaTests extends FunSuite {
 
     val fastas = Iterator.fill(10000)(l)
 
-    fastas appendTo fastaFile
+    fastas appendTo out
   }
 
   test("parsing from iterator") {
+    val in  = testFasta()
+    val out = testOut()
 
-    val fastaFile   = new File("test.fasta")
-    val parsedFile  = new File("parsed.fasta")
-    Files.deleteIfExists(parsedFile.toPath)
+    lines(in).buffered.parseFastaDropErrors() appendTo out
 
-    // WARNING this will leak file descriptors
-    val lines   = Files.lines(fastaFile.toPath).iterator.asScala
-    val asFasta = lines.buffered.parseFastaDropErrors()
-
-    asFasta appendTo parsedFile
+    assert { lines(in).toList == lines(out).toList }
   }
 
   test("FASTA lines parsing") {
