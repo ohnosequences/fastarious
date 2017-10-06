@@ -2,8 +2,8 @@ package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
 
-import ohnosequences.cosas._, types._, klists._, records._
-import ohnosequences.fastarious._, fasta._, ncbiHeaders._
+import ohnosequences.cosas._, types._, klists._
+import ohnosequences.fastarious._, ncbiHeaders._
 
 class NcbiHeadersTests extends FunSuite {
 

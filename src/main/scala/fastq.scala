@@ -1,7 +1,7 @@
 package ohnosequences.fastarious
 
 import fasta._
-import ohnosequences.cosas._, types._, records._, fns._, klists._
+import ohnosequences.cosas._, types._, klists._
 import java.io._
 
 case object fastq {

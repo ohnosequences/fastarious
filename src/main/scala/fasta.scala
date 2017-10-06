@@ -1,6 +1,6 @@
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._, records._, fns._, klists._
+import ohnosequences.cosas._, types._, records._, klists._
 import java.io._
 
 /*

@@ -1,7 +1,5 @@
 package ohnosequences.fastarious
 
-import SequenceQuality._
-
 /*
   ## SequenceQuality
 

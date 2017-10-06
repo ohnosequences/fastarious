@@ -4,7 +4,7 @@ import org.scalatest.FunSuite
 
 import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fasta._
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import java.nio.file._
 import java.io._
 
@@ -98,10 +98,8 @@ class FastaTests extends FunSuite {
     val parsedFile  = new File("parsed.fasta")
     Files.deleteIfExists(parsedFile.toPath)
 
-    import scala.collection.JavaConversions._
-
     // WARNING this will leak file descriptors
-    val lines   = Files.lines(fastaFile.toPath).iterator
+    val lines   = Files.lines(fastaFile.toPath).iterator.asScala
     val asFasta = lines.buffered.parseFastaDropErrors()
 
     asFasta appendTo parsedFile
