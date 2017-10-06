@@ -3,7 +3,13 @@ package ohnosequences.fastarious
 /*
   ## Sequence
 */
-case class Sequence(val letters: String) extends AnyVal {
+final class Sequence(val letters: Array[Char]) {
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: Sequence => java.util.Arrays.equals(letters, that.letters)
+      case _              => false
+   }
 
   def isEmpty: Boolean =
     letters.isEmpty
@@ -53,6 +59,12 @@ case class Sequence(val letters: String) extends AnyVal {
 
 case object Sequence {
 
+  def apply(arr: Array[Char]): Sequence =
+    new Sequence(arr)
+
+  def apply(str: String): Sequence =
+    new Sequence(str.toCharArray)
+
   val empty: Sequence =
-    Sequence("")
+    Sequence(Array[Char]())
 }
