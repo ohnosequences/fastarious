@@ -1,12 +1,13 @@
 name          := "fastarious"
 organization  := "ohnosequences"
 description   := "FASTQ and FASTA APIs"
-
 bucketSuffix  := "era7.com"
 
+crossScalaVersions := Seq("2.11.11", "2.12.3")
+scalaVersion := crossScalaVersions.value.max
+
 libraryDependencies ++= Seq(
-  "ohnosequences"   %% "cosas" % "0.8.0",
-  "org.spire-math"  %% "spire" % "0.13.0"
+  "ohnosequences" %% "cosas" % "0.9.0"
 )
 
 // NOTE should be reestablished
