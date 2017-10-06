@@ -101,7 +101,7 @@ case object Quality {
 
   final
   def scoreFrom(errP: ErrorP): Score =
-    Math.round( -10 * Math.log10(errP) ).toInt
+    Math.round( -10D * Math.log10(errP) ).toInt
 
   final
   def errorProbability(n: Score): ErrorP =
@@ -109,7 +109,7 @@ case object Quality {
 
   private final
   def errorProbabilityImpl(n: Score): ErrorP =
-    Math.pow(10, -(n: Double) / 10)
+    Math.pow(10D, -(n: Double) / 10D)
 
   final
   def successProbability(n: Score): Prob =
