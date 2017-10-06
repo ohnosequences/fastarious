@@ -1,7 +1,6 @@
 package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
-
 import ohnosequences.fastarious._, fastq._
 import java.nio.file._
 import scala.collection.JavaConverters._
@@ -9,8 +8,15 @@ import java.io._
 
 class FastqTests extends FunSuite {
 
-  def lines(jFile: File): Iterator[String] =
-    Files.lines(jFile.toPath).iterator.asScala
+  def testFastq(): File = new File(
+    this.getClass.getResource("/test.fastq").getPath
+  )
+
+  def testOut(): File = {
+    val out = new File("target/test-out.fastq")
+    Files.deleteIfExists(out.toPath)
+    out
+  }
 
   test("FASTQ Id") {
 
@@ -32,23 +38,23 @@ class FastqTests extends FunSuite {
   }
 
   test("parse and write from/to file is idempotent") {
+    val in  = testFastq()
+    val out = testOut()
 
-    val in  = new File("in.fastq")
-    val out = new File("out.fastq")
-    Files.deleteIfExists(out.toPath)
-
-    lines(in).parseFastqPhred33DropErrors appendAsPhred33To out
+    lines(in).parseFastqPhred33DropErrors.appendAsPhred33To(out)
 
     assert { lines(in).toList == lines(out).toList }
   }
 
   test("raw read and write from/to file") {
+    val in  = testFastq()
+    val out = testOut()
 
-    val in  = new File("in.fastq")
-    val out = new File("out.fastq")
-    Files.deleteIfExists(out.toPath)
-
-    Files.write(out.toPath, lines(in).map({ x => x: CharSequence }).toIterable.asJava , StandardOpenOption. CREATE, StandardOpenOption.WRITE)
+    Files.write(out.toPath,
+      lines(in).map{ x => x: CharSequence }.toIterable.asJava,
+      StandardOpenOption.CREATE,
+      StandardOpenOption.WRITE
+    )
 
     assert { lines(in).toList == lines(out).toList }
   }

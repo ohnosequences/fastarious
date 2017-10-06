@@ -45,7 +45,7 @@ class QualityScores extends FunSuite {
     assert { bigQual === Quality(qsAgain) }
   }
 
-  test("Expected errors") {
+  ignore("Expected errors") {
 
     val ee = bigQual.expectedErrors
   }

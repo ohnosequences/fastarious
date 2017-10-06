@@ -16,10 +16,10 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
     scores.length
 
   def at(index: Int): Option[Score] =
-    if( index < 0 || (length - 1) < index) None else Some( scores(index) )
+    scores.lift(index)
 
   def headOption: Option[Score] =
-    if(isEmpty) None else Some { scores.head }
+    scores.headOption
 
   def tailOption: Option[Quality] =
     if(isEmpty) None else Some { drop(1) }
@@ -139,19 +139,24 @@ case object Quality {
   def fromPhred33(raw: String): Option[Quality] = {
 
     @annotation.tailrec
-    def rec(cs: String, acc: collection.mutable.Builder[Int,Vector[Int]], errors: Boolean): Option[Quality] =
-      if(errors) { None } else {
+    def rec(
+      cs: String,
+      acc: collection.mutable.Builder[Int, Vector[Int]],
+      errors: Boolean
+    ): Option[Quality] = if(errors) None else {
 
-        if(cs.isEmpty) Some( Quality(acc.result) ) else {
-
-          cs.head.toInt match {
-            case q if 33 <= q && q <= 126 => rec(cs.tail, acc += (q - 33), errors)
-            case _                        => rec(cs, acc, errors = true)
-          }
-        }
+      cs.headOption.map(_.toInt) match {
+        case None =>
+          Some( Quality(acc.result) )
+        case Some(q) if 33 <= q && q <= 126 =>
+          rec(cs.drop(1), acc += (q - 33), errors)
+        case _ =>
+          rec(cs, acc, errors = true)
       }
+    }
 
-    val bldr = Vector.newBuilder[Int]; bldr.sizeHint(raw.length)
+    val bldr = Vector.newBuilder[Int]
+    bldr.sizeHint(raw.length)
 
     rec(raw, bldr, false)
   }
