@@ -12,10 +12,10 @@ case class Sequence(val letters: String) extends AnyVal {
     letters.length
 
   def at(index: Int): Option[Symbol] =
-    if( index < 0 || (length - 1) < index) None else Some( letters(index) )
+    letters.lift(index)
 
   def headOption: Option[Symbol] =
-    if(isEmpty) None else Some { letters.head }
+    letters.headOption
 
   def tailOption: Option[Sequence] =
     if(isEmpty) None else Some { drop(1) }

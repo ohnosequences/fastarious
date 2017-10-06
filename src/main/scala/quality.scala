@@ -16,10 +16,10 @@ case class Quality(val scores: Seq[Score]) extends AnyVal {
     scores.length
 
   def at(index: Int): Option[Score] =
-    if( index < 0 || (length - 1) < index) None else Some( scores(index) )
+    scores.lift(index)
 
   def headOption: Option[Score] =
-    if(isEmpty) None else Some { scores.head }
+    scores.headOption
 
   def tailOption: Option[Quality] =
     if(isEmpty) None else Some { drop(1) }

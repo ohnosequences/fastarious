@@ -17,11 +17,15 @@ case class SequenceQuality private[fastarious] (val sequence: Sequence, val qual
   def length: Int =
     sequence.length
 
-  def at(index: Int): Option[QSymbol] =
-    sequence.at(index) map { s => QSymbol(s, quality.scores(index)) }
+  def at(index: Int): Option[QSymbol] = for {
+    s <- sequence.at(index)
+    q <- quality.at(index)
+  } yield QSymbol(s, q)
 
-  def headOption: Option[QSymbol] =
-    sequence.headOption map { s =>  QSymbol(s, quality.scores.head) }
+  def headOption: Option[QSymbol] = for {
+    s <- sequence.headOption
+    q <- quality.headOption
+  } yield QSymbol(s, q)
 
   def tailOption: Option[SequenceQuality] =
     if(isEmpty) None else Some { drop(1) }
