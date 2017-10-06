@@ -25,7 +25,7 @@ class NcbiHeadersTests extends FunSuite {
     *[AnyDenotation]
   )
 
-  test("can construct a header string from an ncbi record value") {
+  ignore("can construct a header string from an ncbi record value") {
 
     // val a1 = randomIds.asFastaHeader.value.toString
     // assert { a1 == ">1AC3438D|lcl|db.rna16s|gb|A3CFTC4.4|X4CC8HG|gi|21312324 A really interesting sequence hola hola" }
@@ -35,7 +35,7 @@ class NcbiHeadersTests extends FunSuite {
     // }
   }
 
-  test("ncbi ids example use") {
+  ignore("ncbi ids example use") {
 
     // use the ids before and the sequence, Note the ugly seq etc
     val seq = """

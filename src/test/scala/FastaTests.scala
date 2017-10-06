@@ -11,7 +11,7 @@ import java.io._
 
 class FastaTests extends FunSuite {
 
-  test("can create FASTA values") {
+  ignore("can create FASTA values") {
 
     val f = FASTA(
       header(FastaHeader(">@HUGHA5.ADFDA#")) ::
