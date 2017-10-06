@@ -7,154 +7,110 @@ import ohnosequences.cosas._, types._, records._, fns._, klists._
 import java.io._
 
 case object fastq {
+```
 
-  // id should not include the '@' char
-  case object id        extends Type[FastqId]("id") { val start = "@" }
-  case object sequence  extends Type[FastqSequence]("sequence")
-  case object plus      extends Type[FastqPlus]("plus") { val start = "+" }
-  case object quality   extends Type[FastqQuality]("quality")
 
-  type FASTQ = FASTQ.type
-  case object FASTQ extends RecordType(
-    id        :×:
-    sequence  :×:
-    plus      :×:
-    quality   :×:
-    |[AnyType]
-  ) {
+Here `value` is assumed to correspond to the real id, *without* the `@` character which would identify it in its serialized form. So, do *not* pass `"@HWI:2321"`, write instead `Id("HWI:2321")`
 
-    type RealRaw =
-      (id.type        := id.Raw)        ::
-      (sequence.type  := sequence.Raw)  ::
-      (plus.type      := plus.Raw)      ::
-      (quality.type   := quality.Raw)   ::
-      *[AnyDenotation]
 
-    type Value = FASTQ := RealRaw
+```scala
+  case class Id(val value: String) extends AnyVal {
 
-    implicit def fastqOps(fq: Value): FASTQOps = FASTQOps(fq)
+    def asString: String =
+      s"@${value.filterNot(_ == '\n')}"
 
-    implicit class FASTQIteratorOps(val fastqs: Iterator[Value]) extends AnyVal {
-
-      def appendTo(file: File) = {
-
-        val wr = new BufferedWriter(new FileWriter(file, true))
-
-        fastqs.foreach { fq => { wr.write( fq.asString ); wr.newLine } }
-
-        wr.close
-      }
-    }
+    def isEmpty: Boolean =
+      value.isEmpty
   }
 
-  implicit lazy val idSerializer =
-    new DenotationSerializer(id, id.label)({ v: FastqId => Some(v asString) })
-  implicit lazy val idParser =
-    new DenotationParser(id, id.label)({ v: String => Some(FastqId(v)) })
+  case object Id {
+```
 
-  implicit lazy val sequenceSerializer =
-    new DenotationSerializer(sequence, sequence.label)({ v: FastqSequence => Some(v asString) })
-  implicit lazy val sequenceParser =
-    new DenotationParser(sequence, sequence.label)({ v: String => Some(FastqSequence(v)) })
 
-  implicit lazy val qualitySerializer =
-    new DenotationSerializer(quality, quality.label)({ v: FastqQuality => Some(v asString) })
-  implicit lazy val qualityParser =
-    new DenotationParser(quality, quality.label)({ v: String => Some(FastqQuality(v)) })
+### Id parsing
 
-  implicit lazy val plusSerializer =
-    new DenotationSerializer(plus, plus.label)({ v: FastqPlus => Some(v asString) })
-  implicit lazy val plusParser =
-    new DenotationParser(plus, plus.label)({ v: String => Some(FastqPlus(v)) })
+These methods are *not* for building Id values; for that use `from`.
 
-  case object FastqId {
 
-    def apply(i: String): FastqId = {
+```scala
+    private val isValid: String => Boolean =
+      _ startsWith "@"
+```
 
-      // just *one* line
-      val l = i.filterNot(_ == '\n')
-      if(l startsWith id.start) new FastqId(l drop 1) else new FastqId(l)
-    }
-  }
-  // the value here is assumed (and guaranteed) to be '@'-free
-  final class FastqId private[fastarious] (val value: String) extends AnyVal {
 
-    def toFastaHeader: FastaHeader = new FastaHeader(value)
+`parseFrom` will drop the *first* '@' in `raw`, if any. My understanding is that `@@hola` is a valid (albeit confusing) FASTQ id.
 
-    def asString: String = s"${id.start}${value}"
+
+```scala
+    def parseFrom(raw: String): Option[Id] =
+      if(isValid(raw)) Some( new Id(raw.stripPrefix("@")) ) else None
   }
 
-  case object FastqSequence {
+  case class FASTQ(val id: Id, val sequence: SequenceQuality) {
 
-    def apply(s: String): FastqSequence =
-      new FastqSequence( utils.removeAllSpace(s) )
-  }
-  final class FastqSequence private (val value: String) extends AnyVal {
-
-    def asString = value
-  }
-
-  case object FastqPlus {
-
-    def apply(i: String): FastqPlus = {
-
-      // just *one* line
-      val l = i.filterNot(_ == '\n')
-      if(l startsWith plus.start) new FastqPlus(l drop 1) else new FastqPlus(l)
-    }
-  }
-  // the value here is assumed (and guaranteed) to be '@'-free
-  final class FastqPlus private[fastarious] (val value: String) extends AnyVal {
-
-    def asString: String = s"${plus.start}${value}"
-  }
-
-  case object FastqQuality {
-
-    def apply(s: String): FastqQuality =
-      new FastqQuality( utils.removeAllSpace(s) )
-  }
-  final class FastqQuality private (val value: String) extends AnyVal {
-
-    def asString = value
-  }
-
-  case class FASTQOps(val seq: FASTQ.Value) extends AnyVal {
+    def asStringPhred33: String = Seq(
+      id.asString,
+      sequence.asStringPhred33
+    ).mkString("\n")
 
     def toFASTA: FASTA.Value = FASTA(
-      fasta.header( seq.getV(id).toFastaHeader ) ::
-      fasta.sequence( FastaSequence(seq.getV(sequence).asString) ) ::
+      fasta.header( FastaHeader(id.value) )             ::
+      fasta.sequence( FastaSequence(sequence.sequence.letters) ) ::
       *[AnyDenotation]
     )
 
-    def asString: String = Seq(
-      seq.getV(id).asString,
-      seq.getV(sequence).asString,
-      seq.getV(plus).asString,
-      seq.getV(quality).asString
-    ).mkString("\n")
+    def updateSequence(f: SequenceQuality => SequenceQuality): FASTQ =
+      this.copy(sequence = f(this.sequence))
+  }
+
+  case object FASTQ {
+
+    def fromStringsPhred33(
+      id      : String,
+      letters : String,
+      quality : String
+    )
+    : Option[FASTQ] =
+      SequenceQuality.fromStringsPhred33(letters, quality) map { FASTQ( Id(id), _ ) }
+  }
+
+  implicit class FASTQIteratorOps(val fastqs: Iterator[FASTQ]) extends AnyVal {
+
+    def appendAsPhred33To(file: File): File = {
+
+      if(fastqs.hasNext) {
+        val wr = new BufferedWriter(new FileWriter(file, true))
+
+        fastqs.foreach { fq =>
+          wr.write( fq.asStringPhred33 )
+          wr.newLine
+        }
+        wr.close
+      }
+
+      file
+    }
   }
 
   implicit class IteratorFASTQOps(val lines: Iterator[String]) extends AnyVal {
 
-    def parseMap(): Iterator[Map[String, String]] = {
+    def parseFastqPhred33: Iterator[Option[FASTQ]] =
+      lines
+        .grouped(4).filter(_.size == 4) // grouped is broken
+        .map { quartet =>
 
-      // NOTE much unsafe, should check for id and qual chars etc
-      lines.grouped(4) map { quartet => Map(
-        id.label       -> quartet(0),
-        sequence.label -> quartet(1),
-        plus.label     -> quartet(2),
-        quality.label  -> quartet(3)
-      )}
-    }
+          if( quartet(2) startsWith "+" ) {
+            for {
+              i <- Id.parseFrom( quartet(0) )
+              s <- SequenceQuality.fromStringsPhred33( quartet(1), quartet(3) )
+            } yield FASTQ(i, s)
+          }
+          else None
+        }
 
-    def parseFastq(): Iterator[ Either[ParseDenotationsError, FASTQ.Value] ] =
-      parseMap map { strMap => FASTQ parse strMap }
-
-    def parseFastqDropErrors(): Iterator[FASTQ.Value] =
-      parseFastq collect { case Right(fq) => fq }
+    def parseFastqPhred33DropErrors: Iterator[FASTQ] =
+      parseFastqPhred33 collect { case Some(fq) => fq }
   }
-
 }
 
 ```
@@ -162,10 +118,18 @@ case object fastq {
 
 
 
+[test/scala/DNA.scala]: ../../test/scala/DNA.scala.md
+[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
+[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
+[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
+[test/scala/QualityScores.scala]: ../../test/scala/QualityScores.scala.md
+[main/scala/DNAQ.scala]: DNAQ.scala.md
+[main/scala/quality.scala]: quality.scala.md
+[main/scala/DNA.scala]: DNA.scala.md
+[main/scala/package.scala]: package.scala.md
 [main/scala/fasta.scala]: fasta.scala.md
 [main/scala/fastq.scala]: fastq.scala.md
-[main/scala/ncbiHeaders.scala]: ncbiHeaders.scala.md
+[main/scala/SequenceQuality.scala]: SequenceQuality.scala.md
 [main/scala/utils.scala]: utils.scala.md
-[test/scala/FastaTests.scala]: ../../test/scala/FastaTests.scala.md
-[test/scala/FastqTests.scala]: ../../test/scala/FastqTests.scala.md
-[test/scala/NcbiHeadersTests.scala]: ../../test/scala/NcbiHeadersTests.scala.md
+[main/scala/sequence.scala]: sequence.scala.md
+[main/scala/ncbiHeaders.scala]: ncbiHeaders.scala.md

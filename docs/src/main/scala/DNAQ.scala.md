@@ -2,10 +2,22 @@
 ```scala
 package ohnosequences.fastarious
 
-case object utils {
+import DNA._
 
-  def removeAllSpace(s: String): String =
-    (s split('\n') map { _.trim.filter(_ >= ' ') } mkString)
+case object DNAQ {
+
+  implicit final
+  class DNAQSyntax(val seq: SequenceQuality) {
+
+    def asDNAQ: DNAQOps =
+      DNAQOps(seq)
+  }
+
+  case class DNAQOps(val seq: SequenceQuality) {
+
+    def complement: SequenceQuality =
+      SequenceQuality( seq.sequence.asDNA.complement, seq.quality )
+  }
 }
 
 ```

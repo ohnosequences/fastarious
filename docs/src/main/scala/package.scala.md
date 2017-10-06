@@ -1,11 +1,14 @@
 
 ```scala
-package ohnosequences.fastarious
+package ohnosequences
 
-case object utils {
+package object fastarious {
 
-  def removeAllSpace(s: String): String =
-    (s split('\n') map { _.trim.filter(_ >= ' ') } mkString)
+  type Symbol   = Char
+  type Score    = Int
+  type ErrorP   = Prob
+  type Prob     = Num
+  type Num      = Double
 }
 
 ```

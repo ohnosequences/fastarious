@@ -1,79 +1,65 @@
 package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
-
-import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fastq._
-import java.nio.file.Files
+import java.nio.file._
+import scala.collection.JavaConverters._
 import java.io._
 
 class FastqTests extends FunSuite {
 
-  test("can create FASTQ values") {
+  def testFastq(): File = new File(
+    this.getClass.getResource("/test.fastq").getPath
+  )
 
-    val i = "@HADFAQ!!:$#>#$@"
-    val rawSeq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
-    val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
-
-    val fq = FASTQ.fromStringsPhred33(
-      id        = i,
-      sequence  = rawSeq,
-      quality   = rawQual
-    )
-
-    assert { fq == None }
+  def testOut(): File = {
+    val out = new File("target/test-out.fastq")
+    Files.deleteIfExists(out.toPath)
+    out
   }
 
-  test("can parse fastq files") {
+  test("FASTQ Id") {
 
-    val input = new File("test.fastq")
+    val rawId = "@HWI323 asdf:3"
+    val wrongRawId = "Hola hola" // no '@'
 
-    import java.nio.file._
-    import scala.collection.JavaConversions._
-    // WARNING this will leak file descriptors
-    val lines: Iterator[String] = Files.lines(input.toPath).iterator
-    val buh = lines.parseFastqPhred33
+    assert { (Id parseFrom rawId) == Some( Id("HWI323 asdf:3") ) }
+    assert { (Id parseFrom wrongRawId) == None }
   }
 
-  test("generate fastq file") {
+  test("seq length ≠ qual length means none") {
 
     val i       = "@HADFAQ!!:$#>#$@"
-    val rawSeq  = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC"
+    // different length for seq and qual
+    val rawSeq  = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCA"
     val rawQual = "#$adF!#$DAFAFa5++0-afd324safd"
 
-    val fq = FASTQ.fromStringsPhred33(
-      id        = i,
-      sequence  = rawSeq,
-      quality   = rawQual
+    assert { FASTQ.fromStringsPhred33(id = i, letters = rawSeq, quality = rawQual) == None }
+  }
+
+  test("parse and write from/to file is idempotent") {
+    val in  = testFastq()
+    val out = testOut()
+
+    lines(in).parseFastqPhred33DropErrors.appendAsPhred33To(out)
+
+    assert { lines(in).toList == lines(out).toList }
+  }
+
+  test("raw read and write from/to file") {
+    val in  = testFastq()
+    val out = testOut()
+
+    Files.write(out.toPath,
+      lines(in).map{ x => x: CharSequence }.toIterable.asJava,
+      StandardOpenOption.CREATE,
+      StandardOpenOption.WRITE
     )
 
-    val fastqFile =
-      new File("test.fastq")
-
-    Files.deleteIfExists(fastqFile.toPath)
-
-    val fastqs =
-      fq map { Iterator.fill(1000000)(_) }
-
-    fastqs foreach { _ appendTo fastqFile }
+    assert { lines(in).toList == lines(out).toList }
   }
 
-  test("parsing from iterator") {
-
-    val fastaFile   = new File("test.fastq")
-    val parsedFile  = new File("parsed.fastq")
-    // Files.deleteIfExists(parsedFile.toPath)
-
-    import java.nio.file._
-    import scala.collection.JavaConversions._
-
-    // WARNING this will leak file descriptors
-    val lines: Iterator[String] = Files.lines(fastaFile.toPath).iterator
-
-    lines.parseFastqPhred33DropErrors appendTo parsedFile
-  }
-
-  test("FASTQ quality") {
+  test("FASTQ phred33 quality") {
 
     val rawQual = "$adF!#$DAFAFa5++0-afd324safd"
 
@@ -82,17 +68,17 @@ class FastqTests extends FunSuite {
 
     optQual foreach { q =>
       assert { q.toPhred33 == rawQual }
-      assert { q.value.forall { v => 0 <= v && v <= 93 } }
+      assert { q.scores.forall { v => 0 <= v && v <= 93 } }
     }
   }
 
-  test("FASTQ ops") {
+  test("FASTQ examples") {
 
     val fqOpt =
       FASTQ.fromStringsPhred33(
-        id        = "@HADFAQ!!:$#>#$@",
-        sequence  = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC",
-        quality   = "#$adF!#$DAFAFa5++0-afd324safd"
+        id      = "@HADFAQ!!:$#>#$@",
+        letters = "ATCCGTCCGTCCTGCGTCAAACGTCTGAC",
+        quality = "#$adF!#$DAFAFa5++0-afd324safd"
       )
 
     fqOpt foreach { fqq =>

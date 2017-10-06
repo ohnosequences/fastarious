@@ -1,164 +1,83 @@
 package ohnosequences.fastarious
 
 import fasta._
-import ohnosequences.cosas._, types._, records._, fns._, klists._
+import ohnosequences.cosas._, types._, klists._
 import java.io._
 
 case object fastq {
 
   /*
-
-    ## Sequence
-
-    A fastq sequence has the sequence itself plus the corresponding quality. They are checked at construction.
+    Here `value` is assumed to correspond to the real id, *without* the `@` character which would identify it in its serialized form. So, do *not* pass `"@HWI:2321"`, write instead `Id("HWI:2321")`
   */
-  case class Sequence private[fastarious] (val sequence: String, val quality: Quality) {
-
-    def length =
-      sequence.length
-
-    def drop(n: Int): Sequence =
-      Sequence( sequence drop n, Quality( quality.value drop n ) )
-
-    def dropRight(n: Int): Sequence =
-      Sequence( sequence dropRight n, Quality( quality.value dropRight n ) )
-
-    def slice(from: Int, until: Int): Sequence =
-      Sequence( sequence.slice(from, until), Quality( quality.value.slice(from, until) ) )
-
-    def ++(other: Sequence): Sequence =
-      Sequence(sequence ++ other.sequence, Quality( quality.value ++ other.quality.value ))
-
-    def asStringPhred33: String =
-      s"${sequence}\n+\n${quality.toPhred33}"
-
-    def filter(p: (Char, Int) => Boolean): Sequence = {
-
-      val (seq, qual) =
-        (sequence zip quality.value)
-          .filter({ cq => p(cq._1, cq._2) })
-          .unzip
-
-      Sequence(seq.mkString, Quality(qual))
-    }
-
-    def filterSequence(p: Char => Boolean): Sequence =
-      filter({ (s,q) => p(s) })
-
-    def filterQuality(p: Int => Boolean): Sequence =
-      filter({ (s,q) => p(q) })
-
-    def takeWhile(p: (Char, Int) => Boolean): Sequence = {
-      val (seq, qual) =
-        (sequence zip quality.value)
-          .takeWhile({ cq => p(cq._1, cq._2) })
-          .unzip
-
-      Sequence(seq.mkString, Quality(qual))
-    }
-  }
-
-  case object Sequence {
-
-    def fromStringsPhred33(rawSeq: String, rawQual: String): Option[Sequence] =
-      if(rawSeq.length == rawQual.length)
-        Quality.fromPhred33(rawQual).map( Sequence(rawSeq, _) )
-      else
-        None
-  }
-
-  case class  Quality private[fastarious] (val value: Seq[Int]) extends AnyVal {
-
-    def toPhred33: String =
-      (value map Quality.toPhred33).mkString
-  }
-
-  case object Quality {
-
-    def fromPhred33(raw: String): Option[Quality] = {
-
-      def rec(cs: String, acc: Seq[Int], errors: Boolean): Option[Quality] =
-        if(errors) { None } else {
-
-          if(cs.isEmpty) Some( Quality(acc) ) else {
-
-            cs.head.toInt match {
-              case q if 33 <= q && q <= 126 => rec(cs.tail, acc :+ (q - 33), errors)
-              case _                        => rec(cs, acc, errors = true)
-            }
-          }
-        }
-
-      rec(raw, Seq.empty, false)
-    }
-
-    val toPhred33: Int => Char = i => (i + 33).toChar
-  }
-
-  // TODO value should not have @ at the beginning
-  class Id(val value: String) extends AnyVal {
+  case class Id(val value: String) extends AnyVal {
 
     def asString: String =
-      s"@${value}"
+      s"@${value.filterNot(_ == '\n')}"
+
+    def isEmpty: Boolean =
+      value.isEmpty
   }
+
   case object Id {
 
+    /*
+      ### Id parsing
+
+      These methods are *not* for building Id values; for that use `from`.
+    */
     private val isValid: String => Boolean =
-      raw =>
-        (raw startsWith "@") &&
-        !(raw contains "\n")
+      _ startsWith "@"
 
-    def from(raw: String): Option[Id] = {
-
-      // just *one* line
-      val l = raw.filterNot(_ == '\n').dropWhile(_ == '@')
-
-      if(l.nonEmpty) Some( new Id(l) ) else None
-    }
-
+    /*
+      `parseFrom` will drop the *first* '@' in `raw`, if any. My understanding is that `@@hola` is a valid (albeit confusing) FASTQ id.
+    */
     def parseFrom(raw: String): Option[Id] =
-      if(isValid(raw)) Some( new Id(raw) ) else None
+      if(isValid(raw)) Some( new Id(raw.stripPrefix("@")) ) else None
   }
 
-  case class FASTQ(val id: Id, val sequence: Sequence) {
+  case class FASTQ(val id: Id, val sequence: SequenceQuality) {
 
-    def asStringPhred33: String =
-      s"${id.asString}\n${sequence.asStringPhred33}"
+    def asStringPhred33: String = Seq(
+      id.asString,
+      sequence.asStringPhred33
+    ).mkString("\n")
 
     def toFASTA: FASTA.Value = FASTA(
-      fasta.header( FastaHeader(id.value) )              ::
-      fasta.sequence( FastaSequence(sequence.sequence) ) ::
-        *[AnyDenotation]
+      fasta.header( FastaHeader(id.value) )             ::
+      fasta.sequence( FastaSequence(sequence.sequence.letters) ) ::
+      *[AnyDenotation]
     )
+
+    def updateSequence(f: SequenceQuality => SequenceQuality): FASTQ =
+      this.copy(sequence = f(this.sequence))
   }
 
   case object FASTQ {
 
     def fromStringsPhred33(
-      id: String,
-      sequence: String,
-      quality: String
+      id      : String,
+      letters : String,
+      quality : String
     )
-    : Option[FASTQ] = {
-
-      val z = (Id.from(id), Sequence.fromStringsPhred33(sequence, quality))
-
-      for (a <- z._1; b <- z._2) yield FASTQ(a,b)
-    }
+    : Option[FASTQ] =
+      SequenceQuality.fromStringsPhred33(letters, quality) map { FASTQ( Id(id), _ ) }
   }
 
   implicit class FASTQIteratorOps(val fastqs: Iterator[FASTQ]) extends AnyVal {
 
-    def appendTo(file: File): File = {
-
-      val wr = new BufferedWriter(new FileWriter(file, true))
+    def appendAsPhred33To(file: File): File = {
 
       if(fastqs.hasNext) {
+        val wr = new BufferedWriter(new FileWriter(file, true))
 
-        fastqs.foreach { fq => { wr.write( fq.asStringPhred33 ); wr.newLine } }
-        wr.close; file
+        fastqs.foreach { fq =>
+          wr.write( fq.asStringPhred33 )
+          wr.newLine
+        }
+        wr.close
       }
-      else file
+
+      file
     }
   }
 
@@ -166,14 +85,14 @@ case object fastq {
 
     def parseFastqPhred33: Iterator[Option[FASTQ]] =
       lines
-        .filterNot(_.isEmpty)
-        .grouped(4)
+        .grouped(4).filter(_.size == 4) // grouped is broken
         .map { quartet =>
-          if(quartet(3) == "+") {
 
-            Id.parseFrom( quartet(0) ) flatMap { id =>
-              Sequence.fromStringsPhred33( quartet(1), quartet(3) ) map { FASTQ(id,_) }
-            }
+          if( quartet(2) startsWith "+" ) {
+            for {
+              i <- Id.parseFrom( quartet(0) )
+              s <- SequenceQuality.fromStringsPhred33( quartet(1), quartet(3) )
+            } yield FASTQ(i, s)
           }
           else None
         }
@@ -181,5 +100,4 @@ case object fastq {
     def parseFastqPhred33DropErrors: Iterator[FASTQ] =
       parseFastqPhred33 collect { case Some(fq) => fq }
   }
-
 }

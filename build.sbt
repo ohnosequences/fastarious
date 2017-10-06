@@ -1,16 +1,15 @@
 name          := "fastarious"
 organization  := "ohnosequences"
-description   := "fastarious project"
-
+description   := "FASTQ and FASTA APIs"
 bucketSuffix  := "era7.com"
 
-libraryDependencies ++= Seq(
-  "ohnosequences" %% "cosas" % "0.8.0"
-)
+crossScalaVersions := Seq("2.11.11", "2.12.3")
+scalaVersion := crossScalaVersions.value.max
 
-// NOTE should be reestablished
-wartremoverErrors in (Test,    compile) := Seq()
-wartremoverErrors in (Compile, compile) := Seq()
+libraryDependencies ++= Seq(
+  "ohnosequences" %% "cosas"     % "0.9.0",
+  "org.scalatest" %% "scalatest" % "3.0.4" % Test
+)
 
 // shows time for each test:
 testOptions in Test += Tests.Argument("-oD")
