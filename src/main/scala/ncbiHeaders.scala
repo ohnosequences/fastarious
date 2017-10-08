@@ -59,13 +59,15 @@ case object ncbiHeaders {
   ) {
 
     // NOTE: the order is important
-    override def toString: String = Seq[Option[AnyNcbiID]](
-      Some(id),
-      lcl,
-      gb,
-      gi,
-      name
-    ).flatten.mkString("|")
+    override def toString: String = {
+      Seq[Option[AnyNcbiID]](
+        Some(id),
+        lcl,
+        gb,
+        gi
+      ).flatten.mkString("|") +
+      name.getOrElse("").toString
+    }
 
     // TODO
     // def asFastaHeader: fasta.Header = ???
