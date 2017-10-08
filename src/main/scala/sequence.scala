@@ -49,6 +49,12 @@ case class Sequence(val letters: String) extends AnyVal {
 
   def reverse: Sequence =
     Sequence(letters.reverse)
+
+  def asLinesFASTA: Seq[String] =
+    letters.grouped(70).toSeq
+
+  def asStringFASTA: String =
+    asLinesFASTA.mkString("\n")
 }
 
 case object Sequence {

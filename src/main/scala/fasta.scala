@@ -1,6 +1,6 @@
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._, records._, klists._
+import ohnosequences.cosas._, types._
 import java.io._
 
 /*
@@ -26,14 +26,10 @@ import java.io._
 */
 case object fasta {
 
-  case class FASTA(
-    val header: Header
-    val sequence: Sequence
-  )
+  case class Header private[fastarious](val value: String) extends AnyVal {
 
-  case class Header private[fastarious] (val value: String) extends AnyVal {
-
-    override def toString: String = s">${value}"
+    def asString: String =
+      Seq(Header.prefix, value).mkString
 
     final def id: String = value.takeWhile(_ != ' ')
 
@@ -42,47 +38,34 @@ case object fasta {
   }
 
   case object Header {
+    final val prefix: String = ">"
 
+    // TODO: rename to parseFrom
     def from(raw: String): Option[Header] = {
-      if (isValid(raw)) Some(Header(h.stripPrefix(">")))
-      else None
+      if (isValid(raw))
+        Some(Header(raw.stripPrefix(prefix)))
+      else
+        None
+    }
 
-    def isValid(str: String): Boolean = str startsWith ">"
+    def isValid(str: String): Boolean =
+      str.startsWith(prefix)
   }
 
-  case class Sequence private (val value: String) extends AnyVal {
+  case class FASTA(
+    val header: Header,
+    val sequence: Sequence
+  ) {
 
-    final def ++(other: Sequence): Sequence =
-      Sequence(s"${value}${other.value}")
-  }
+    def lines: Seq[String] =
+      header.asString +: sequence.asLinesFASTA
 
-  case object Sequence {
-
-    def apply(ll: Seq[String]): Sequence =
-      new Sequence( ll.map(utils.removeAllSpace).mkString )
-
-    def apply(l: String): Sequence =
-      new Sequence( utils.removeAllSpace(l) )
-
-    // def isValid(str: String): Boolean = ! header.is(str)
-  }
-
-  implicit class FASTAOps(val fa: FASTA.Value) extends AnyVal {
-
-    // instead of toLines, which is a confusing name anyway
-
-    def toMap: Map[String, String] = Map(
-      header.label   -> (fa.header).toString,
-      sequence.label -> (fa.sequence).value.grouped(70).mkString("\n")
-    )
-
-    def asString: String = toMap.values.mkString("\n")
-    def lines: Seq[String] = (fa.header).toString :: (fa.sequence).value.grouped(70).toList
+    def asString: String = lines.mkString("\n")
   }
 
 
 
-  implicit class FASTAIteratorOps(val fastas: Iterator[FASTA.Value]) extends AnyVal {
+  implicit class FASTAIteratorOps(val fastas: Iterator[FASTA]) extends AnyVal {
 
     def appendTo(file: File): File = {
 
@@ -115,28 +98,23 @@ case object fasta {
 
     /* Use this method to parse all FASTA values from the `lines` iterator (with possible errors) */
     def parseFasta():
-        Iterator[ Either[ParseDenotationsError, FASTA.Value] ] =
-    new Iterator[ Either[ParseDenotationsError, FASTA.Value] ] {
+        Iterator[ Either[ParseDenotationsError, FASTA] ] =
+    new Iterator[ Either[ParseDenotationsError, FASTA] ] {
 
       /* If there is one more header, there is one more FASTA value (even if the sequence is empty) */
-      def hasNext: Boolean = lines.hasNext && fasta.header.is(lines.head)
+      def hasNext: Boolean = lines.hasNext && Header.isValid(lines.head)
 
-      def next(): Either[ParseDenotationsError, FASTA.Value] = {
+      def next(): Either[ParseDenotationsError, FASTA] = {
         val hdr: String = lines.next()
-        val seq: String = cutUntil(fasta.header.is).mkString
+        val seq: String = cutUntil(Header.isValid).mkString
 
-        val valueMap = Map[String, String](
-            header.label -> hdr,
-          sequence.label -> seq
-        )
-
-        FASTA parse valueMap
+        Right(FASTA(Header(hdr), Sequence(seq)))
       }
     }
 
     /* This is the same as `parseFasta` dropping all erroneous FASTAs and skipping anything before the first FASTA value */
-    def parseFastaDropErrors(skipCrap: Boolean = true): Iterator[FASTA.Value] = {
-      if (skipCrap) cutUntil(fasta.header.is)
+    def parseFastaDropErrors(skipCrap: Boolean = true): Iterator[FASTA] = {
+      if (skipCrap) cutUntil(Header.isValid)
       parseFasta() collect { case Right(fa) => fa }
     }
   }

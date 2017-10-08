@@ -1,7 +1,6 @@
 package ohnosequences.fastarious
 
 import fasta._
-import ohnosequences.cosas._, types._, klists._
 import java.io._
 
 case object fastq {
@@ -42,10 +41,9 @@ case object fastq {
       sequence.asStringPhred33
     ).mkString("\n")
 
-    def toFASTA: FASTA.Value = FASTA(
-      fasta.header( FastaHeader(id.value) )             ::
-      fasta.sequence( FastaSequence(sequence.sequence.letters) ) ::
-      *[AnyDenotation]
+    def toFASTA: FASTA = FASTA(
+      Header(id.value),
+      sequence.sequence
     )
 
     def updateSequence(f: SequenceQuality => SequenceQuality): FASTQ =
