@@ -1,6 +1,5 @@
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._
 import java.io._
 
 /*
@@ -40,8 +39,7 @@ case object fasta {
   case object Header {
     final val prefix: String = ">"
 
-    // TODO: rename to parseFrom
-    def from(raw: String): Option[Header] = {
+    def parseFrom(raw: String): Option[Header] = {
       if (isValid(raw))
         Some(Header(raw.stripPrefix(prefix)))
       else
@@ -98,25 +96,30 @@ case object fasta {
 
     /* Use this method to parse all FASTA values from the `lines` iterator (with possible errors) */
     def parseFasta():
-        Iterator[ Either[ParseDenotationsError, FASTA] ] =
-    new Iterator[ Either[ParseDenotationsError, FASTA] ] {
+        Iterator[ Option[FASTA] ] =
+    new Iterator[ Option[FASTA] ] {
 
       /* If there is one more header, there is one more FASTA value (even if the sequence is empty) */
       def hasNext: Boolean = lines.hasNext && Header.isValid(lines.head)
 
-      def next(): Either[ParseDenotationsError, FASTA] = {
-        val hdr: String = lines.next()
-        val seq: String = cutUntil(Header.isValid).mkString
+      def next(): Option[FASTA] = {
+        val line: String = lines.next()
+        val rest: String = cutUntil(Header.isValid).mkString
 
-        Right(FASTA(Header(hdr), Sequence(seq)))
+        Header.parseFrom(line) map { header =>
+          FASTA(header, Sequence(rest))
+        }
       }
     }
 
     /* This is the same as `parseFasta` dropping all erroneous FASTAs and skipping anything before the first FASTA value */
-    def parseFastaDropErrors(skipCrap: Boolean = true): Iterator[FASTA] = {
+    def parseFastaDropErrors(skipCrap: Boolean): Iterator[FASTA] = {
       if (skipCrap) cutUntil(Header.isValid)
-      parseFasta() collect { case Right(fa) => fa }
+      parseFasta().flatten
     }
+
+    def parseFastaDropErrors(): Iterator[FASTA] =
+      parseFastaDropErrors(skipCrap = true)
   }
 
 }
