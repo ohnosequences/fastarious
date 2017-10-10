@@ -102,12 +102,14 @@ case object fasta {
       def hasNext: Boolean = lines.hasNext && Header.isValid(lines.head)
 
       def next(): Option[FASTA] = {
-        val line: String = lines.next()
-        val rest: String = cutUntil(Header.isValid).mkString
+        if (hasNext) {
+          val line: String = lines.next()
+          val rest: String = cutUntil(Header.isValid).mkString
 
-        Header.parseFrom(line) map { header =>
-          FASTA(header, Sequence(rest))
-        }
+          Header.parseFrom(line) map { header =>
+            FASTA(header, Sequence(rest))
+          }
+        } else Iterator.empty.next()
       }
     }
 
