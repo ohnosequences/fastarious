@@ -30,10 +30,9 @@ case object fasta {
     def asString: String =
       Seq(Header.prefix, value).mkString
 
+    // NOTE: value == s"${id} ${description}"
     final def id: String = value.takeWhile(_ != ' ')
-
-    /* Note that description will keep the initial empty space, so that `value == s"${id}${description}"` */
-    final def description: String = value.stripPrefix(id)
+    final def description: String = value.stripPrefix(s"${id} ")
   }
 
   case object Header {

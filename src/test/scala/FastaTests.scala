@@ -40,7 +40,7 @@ class FastaTests extends FunSuite {
       Sequence("AATATAT ATA TACACAC AAATC")
     )
 
-    assert { s"${fa.header.id}${fa.header.description}" === fa.header.value }
+    assert { s"${fa.header.id} ${fa.header.description}" === fa.header.value }
   }
 
 
