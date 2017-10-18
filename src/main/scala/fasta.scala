@@ -25,7 +25,7 @@ import java.io._
 */
 case object fasta {
 
-  case class Header private[fastarious](val value: String) extends AnyVal {
+  case class Header(val value: String) extends AnyVal {
 
     def asString: String =
       Seq(Header.prefix, value).mkString
@@ -94,33 +94,29 @@ case object fasta {
     }
 
     /* Use this method to parse all FASTA values from the `lines` iterator (with possible errors) */
-    def parseFasta():
-        Iterator[ Option[FASTA] ] =
-    new Iterator[ Option[FASTA] ] {
+    def parseFasta: Iterator[FASTA] = new Iterator[FASTA] {
 
       /* If there is one more header, there is one more FASTA value (even if the sequence is empty) */
       def hasNext: Boolean = lines.hasNext && Header.isValid(lines.head)
 
-      def next(): Option[FASTA] = {
-        if (hasNext) {
+      def next(): FASTA =
+        if (!hasNext) Iterator.empty.next()
+        else {
           val line: String = lines.next()
           val rest: String = cutUntil(Header.isValid).mkString
-
-          Header.parseFrom(line) map { header =>
-            FASTA(header, Sequence(rest))
-          }
-        } else Iterator.empty.next()
-      }
+          FASTA(
+            // hasNext means, that line is a valid header
+            Header(line.stripPrefix(Header.prefix)),
+            Sequence(rest)
+          )
+        }
     }
 
-    /* This is the same as `parseFasta` dropping all erroneous FASTAs and skipping anything before the first FASTA value */
-    def parseFastaDropErrors(skipCrap: Boolean): Iterator[FASTA] = {
-      if (skipCrap) cutUntil(Header.isValid)
-      parseFasta().flatten
+    /* This is the same as `parseFasta`, but skips anything before the first FASTA value */
+    def parseFastaSkipCrap: Iterator[FASTA] = {
+      cutUntil(Header.isValid)
+      parseFasta
     }
-
-    def parseFastaDropErrors(): Iterator[FASTA] =
-      parseFastaDropErrors(skipCrap = true)
   }
 
 }

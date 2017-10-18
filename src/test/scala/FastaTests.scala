@@ -63,7 +63,7 @@ class FastaTests extends FunSuite {
     val in  = testFasta()
     val out = testOut()
 
-    lines(in).buffered.parseFastaDropErrors() appendTo out
+    lines(in).buffered.parseFasta appendTo out
 
     assert { lines(in).toList == lines(out).toList }
   }
@@ -91,37 +91,37 @@ class FastaTests extends FunSuite {
     )
 
     assert {
-      (crap ++ fasta1.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      (crap ++ fasta1.lines).iterator.buffered.parseFastaSkipCrap.toList ==
         List(fasta1)
     }
 
     assert {
-      (crap ++ emptyFasta.lines ++ fasta1.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      (crap ++ emptyFasta.lines ++ fasta1.lines).iterator.buffered.parseFastaSkipCrap.toList ==
         List(emptyFasta, fasta1)
     }
 
     assert {
-      emptyFasta.lines.iterator.buffered.parseFastaDropErrors().toList ==
+      emptyFasta.lines.iterator.buffered.parseFasta.toList ==
         List(emptyFasta)
     }
 
     assert {
-      (fasta1.lines ++ emptyFasta.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      (fasta1.lines ++ emptyFasta.lines).iterator.buffered.parseFasta.toList ==
         List(fasta1, emptyFasta)
     }
 
     assert {
-      List(fasta1,fasta2).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      List(fasta1,fasta2).flatMap(_.lines).iterator.buffered.parseFasta.toList ==
         List(fasta1,fasta2)
     }
 
     assert {
-      List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator.buffered.parseFasta.toList ==
         List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1)
     }
 
     assert {
-      List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta).flatMap(_.lines).iterator.buffered.parseFasta.toList ==
         List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta)
     }
   }
