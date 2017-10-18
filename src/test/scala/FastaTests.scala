@@ -1,7 +1,6 @@
 package ohnosequences.fastarious.test
 
 import org.scalatest.FunSuite
-import ohnosequences.cosas._, types._, klists._
 import ohnosequences.fastarious._, fasta._
 import java.nio.file._
 import java.io._
@@ -18,46 +17,14 @@ class FastaTests extends FunSuite {
     out
   }
 
-  ignore("can create FASTA values") {
-
-    val f = FASTA(
-      header(FastaHeader(">@HUGHA5.ADFDA#")) ::
-      sequence(FastaSequence("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATC")) :: *[AnyDenotation]
-    )
-  }
-
-  test("can serialize and parse FASTA values") {
-
-    val h = ">@HUGHA5.ADFDA#"
-    val seq = """
-    ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATC
-    ATCCACGA
-    TTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-    CCCTACATATAATATATATATACCCGA
-    CCCCCTTCTACACTCCCCCCCCCCCACATGGTCATAC
-    AACT
-    """
-
-    val f = FASTA(
-      header(FastaHeader(h))        ::
-      sequence(FastaSequence(seq))  ::
-      *[AnyDenotation]
-    )
-
-    assert {
-      f.serialize[String].fold(l => l, r => FASTA parse r) === Right(f)
-    }
-  }
-
   test("line length is always 70") {
 
     val h = ">@HUGHA5.ADFDA#"
     val seq = "ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCATCCACGATTTCACAACAGTGTCAACTGAACACACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTACATATAATATATATATACCCGACCCCCTTCTACACTCCCCCCCCCCCACATGGTCATACAACT"
 
     val f = FASTA(
-      header(FastaHeader(h))        ::
-      sequence(FastaSequence(seq))  ::
-      *[AnyDenotation]
+      Header(h),
+      Sequence(seq)
     )
 
     val ls = f.asString
@@ -69,12 +36,11 @@ class FastaTests extends FunSuite {
   test("id and description == header value") {
 
     val fa = FASTA(
-      header( FastaHeader("adsfa12312 que bonita secuencia") )  ::
-      sequence( FastaSequence("AATATAT ATA TACACAC AAATC"))     ::
-      *[AnyDenotation]
+      Header("adsfa12312 que bonita secuencia"),
+      Sequence("AATATAT ATA TACACAC AAATC")
     )
 
-    assert { s"${fa.getV(header).id}${fa.getV(header).description}" === fa.getV(header).value }
+    assert { s"${fa.header.id} ${fa.header.description}" === fa.header.value }
   }
 
 
@@ -82,15 +48,11 @@ class FastaTests extends FunSuite {
   test("generate fasta file") {
     val out = testOut()
 
-    val id = FastaHeader("id|12312312 una secuencia cualquiera")
-    val randomLines = FastaSequence("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCCCCCCTTCTACACTCCCCCCCCCCCACATGGTCATTTCTACACACCCCCCCCCCCCCCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGCATCCCTACATATACTTCTCGTCATACTCATACATACACCCCCCCCCCCACAGGGGTCCATACAAAGGGCTTATATCCCCACGGGTCTTTTTCACTTCATATTTTTGGGGGCCTCGCGCGCCCTTAC")
+    val id = Header("id|12312312 una secuencia cualquiera")
+    val randomLines = Sequence("ATCCGTCCGTCCTGCGTCAAACGTCTGACCCACGTTTGTCATCATCCCCCCTTCTACACTCCCCCCCCCCCACATGGTCATTTCTACACACCCCCCCCCCCCCCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGCATCCCTACATATACTTCTCGTCATACTCATACATACACCCCCCCCCCCACAGGGGTCCATACAAAGGGCTTATATCCCCACGGGTCTTTTTCACTTCATATTTTTGGGGGCCTCGCGCGCCCTTAC")
 
     // somewhere around 2MB
-    val l = FASTA(
-      (header   := id)           ::
-      (sequence := randomLines)  ::
-      *[AnyDenotation]
-    )
+    val l = FASTA(id, randomLines)
 
     val fastas = Iterator.fill(10000)(l)
 
@@ -101,7 +63,7 @@ class FastaTests extends FunSuite {
     val in  = testFasta()
     val out = testOut()
 
-    lines(in).buffered.parseFastaDropErrors() appendTo out
+    lines(in).buffered.parseFasta appendTo out
 
     assert { lines(in).toList == lines(out).toList }
   }
@@ -114,55 +76,52 @@ class FastaTests extends FunSuite {
     )
 
     val fasta1 = FASTA(
-      header(FastaHeader(">1 hola")) ::
-      sequence(FastaSequence("ATCACCCACTTTACATTTCACACACCCCTTTACAC")) ::
-      *[AnyDenotation]
+      Header(">1 hola"),
+      Sequence("ATCACCCACTTTACATTTCACACACCCCTTTACAC")
     )
 
     val fasta2 = FASTA(
-      header(FastaHeader(">2 hola")) ::
-      sequence(FastaSequence("ATATACCCACACCCCGGTCAT")) ::
-      *[AnyDenotation]
+      Header(">2 hola"),
+      Sequence("ATATACCCACACCCCGGTCAT")
     )
 
     val emptyFasta = FASTA(
-      header(FastaHeader(">3 nothing")) ::
-      sequence(FastaSequence("")) ::
-      *[AnyDenotation]
+      Header(">3 nothing"),
+      Sequence("")
     )
 
     assert {
-      (crap ++ fasta1.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      (crap ++ fasta1.lines).iterator.buffered.parseFastaSkipCrap.toList ==
         List(fasta1)
     }
 
     assert {
-      (crap ++ emptyFasta.lines ++ fasta1.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      (crap ++ emptyFasta.lines ++ fasta1.lines).iterator.buffered.parseFastaSkipCrap.toList ==
         List(emptyFasta, fasta1)
     }
 
     assert {
-      emptyFasta.lines.iterator.buffered.parseFastaDropErrors().toList ==
+      emptyFasta.lines.iterator.buffered.parseFasta.toList ==
         List(emptyFasta)
     }
 
     assert {
-      (fasta1.lines ++ emptyFasta.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      (fasta1.lines ++ emptyFasta.lines).iterator.buffered.parseFasta.toList ==
         List(fasta1, emptyFasta)
     }
 
     assert {
-      List(fasta1,fasta2).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      List(fasta1,fasta2).flatMap(_.lines).iterator.buffered.parseFasta.toList ==
         List(fasta1,fasta2)
     }
 
     assert {
-      List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1).flatMap(_.lines).iterator.buffered.parseFasta.toList ==
         List(emptyFasta,fasta2,fasta1,fasta2,fasta2,fasta1)
     }
 
     assert {
-      List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta).flatMap(_.lines).iterator.buffered.parseFastaDropErrors().toList ==
+      List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta).flatMap(_.lines).iterator.buffered.parseFasta.toList ==
         List(emptyFasta,emptyFasta,fasta2,emptyFasta,fasta1,fasta2,fasta2,fasta1,emptyFasta)
     }
   }

@@ -1,6 +1,5 @@
 package ohnosequences.fastarious
 
-import ohnosequences.cosas._, types._, records._, klists._
 import java.io._
 
 /*
@@ -26,106 +25,57 @@ import java.io._
 */
 case object fasta {
 
-  case object header extends Type[FastaHeader]("header") {
+  case class Header(val value: String) extends AnyVal {
 
-    val start: String = ">"
+    def asString: String =
+      Seq(Header.prefix, value).mkString
 
-    def is(str: String): Boolean = str startsWith start
+    // NOTE: value == s"${id} ${description}"
+    final def id: String = value.takeWhile(_ != ' ')
+    final def description: String = value.stripPrefix(s"${id} ")
   }
-  case object sequence  extends Type[FastaSequence]("sequence") {
 
-    def is(str: String): Boolean = ! header.is(str)
+  case object Header {
+    final val prefix: String = ">"
+
+    def parseFrom(raw: String): Option[Header] = {
+      if (isValid(raw))
+        Some(Header(raw.stripPrefix(prefix)))
+      else
+        None
+    }
+
+    def isValid(str: String): Boolean =
+      str.startsWith(prefix)
   }
 
-  /*
-    The `FASTA` record is what you use for sane interaction with fasta elements.
-  */
-  type FASTA = FASTA.type
-  case object FASTA extends RecordType(
-    header    :×:
-    sequence  :×:
-    |[AnyType]
+  case class FASTA(
+    val header: Header,
+    val sequence: Sequence
   ) {
-    type RealRaw =
-      (header.type := FastaHeader) ::
-      (sequence.type := FastaSequence) ::
-      *[AnyDenotation]
 
-    type Value = FASTA := RealRaw
+    def lines: Seq[String] =
+      header.asString +: sequence.asLinesFASTA
 
-    implicit def fastaOps(fa: FASTA.Value): FASTAOps = new FASTAOps(fa)
-    implicit def fastaIteratorOps(fas: Iterator[FASTA.Value]): FASTAIteratorOps = new FASTAIteratorOps(fas)
+    def asString: String = lines.mkString("\n")
   }
 
-  final class FASTAIteratorOps(val fastas: Iterator[FASTA.Value]) extends AnyVal {
 
-    def appendTo(file: File) = {
+
+  implicit class FASTAIteratorOps(val fastas: Iterator[FASTA]) extends AnyVal {
+
+    def appendTo(file: File): File = {
 
       val wr = new BufferedWriter(new FileWriter(file, true))
-
-      fastas.foreach { fa => { wr.write( fa.asString ); wr.newLine } }
-
+      fastas.foreach { fa =>
+        wr.write( fa.asString )
+        wr.newLine
+      }
       wr.close
+
+      file
     }
   }
-
-
-  case object FastaHeader {
-
-    def apply(h: String): FastaHeader = new FastaHeader(h.stripPrefix(header.start))
-  }
-
-  final class FastaHeader private[fastarious](val value: String) extends AnyVal {
-
-    override def toString: String = s"${header.start}${value}"
-
-    final def id: String = value.takeWhile(_ != ' ')
-    /* Note that description will keep the initial empty space, so that `value == s"${id}${description}"` */
-    final def description: String = value.stripPrefix(id)
-  }
-
-  case object FastaSequence {
-
-    def apply(ll: Seq[String]): FastaSequence =
-      new FastaSequence( ll.map(utils.removeAllSpace).mkString )
-
-    def apply(l: String): FastaSequence =
-      new FastaSequence( utils.removeAllSpace(l) )
-  }
-
-  final class FastaSequence private (val value: String) extends AnyVal {
-
-    final def ++(other: FastaSequence): FastaSequence =
-      FastaSequence(s"${value}${other.value}")
-  }
-
-  final class FASTAOps(val fa: FASTA.Value) extends AnyVal {
-
-    // instead of toLines, which is a confusing name anyway
-
-    def toMap: Map[String, String] = Map(
-      header.label   -> (fa getV header).toString,
-      sequence.label -> (fa getV sequence).value.grouped(70).mkString("\n")
-    )
-
-    def asString: String = toMap.values.mkString("\n")
-    def lines: Seq[String] =(fa getV header).toString :: (fa getV sequence).value.grouped(70).toList
-  }
-
-  /*
-    ## Fasta parsing and serialization
-
-    These are parser and serializers instances for the `FASTA` record field. They make possible transparent use of *cosas* record parsing from `Map[String,String]`.
-  */
-  implicit lazy val headerSerializer =
-    new DenotationSerializer(header, header.label)({ h: FastaHeader => Some(h.toString) })
-  implicit lazy val headerParser =
-    new DenotationParser(header, header.label)({ v: String => Some(FastaHeader(v)) })
-
-  implicit lazy val sequenceSerializer =
-    new DenotationSerializer(sequence, sequence.label)({ fl: FastaSequence => Some(fl.value) })
-  implicit lazy val sequenceParser =
-    new DenotationParser(sequence, sequence.label)({ v: String => Some(FastaSequence(v)) })
 
   /* Note, all we only use `next`, `hasNext` and `head` method here, so the `lines` iterator can be used after calling any of these extension methods and can be considered as the parsing "remainder" (i.e. unparsed part) */
   implicit class BufferedIteratorFASTAOps(val lines: BufferedIterator[String]) extends AnyVal {
@@ -144,30 +94,28 @@ case object fasta {
     }
 
     /* Use this method to parse all FASTA values from the `lines` iterator (with possible errors) */
-    def parseFasta():
-        Iterator[ Either[ParseDenotationsError, FASTA.Value] ] =
-    new Iterator[ Either[ParseDenotationsError, FASTA.Value] ] {
+    def parseFasta: Iterator[FASTA] = new Iterator[FASTA] {
 
       /* If there is one more header, there is one more FASTA value (even if the sequence is empty) */
-      def hasNext: Boolean = lines.hasNext && fasta.header.is(lines.head)
+      def hasNext: Boolean = lines.hasNext && Header.isValid(lines.head)
 
-      def next(): Either[ParseDenotationsError, FASTA.Value] = {
-        val hdr: String = lines.next()
-        val seq: String = cutUntil(fasta.header.is).mkString
-
-        val valueMap = Map[String, String](
-            header.label -> hdr,
-          sequence.label -> seq
-        )
-
-        FASTA parse valueMap
-      }
+      def next(): FASTA =
+        if (!hasNext) Iterator.empty.next()
+        else {
+          val line: String = lines.next()
+          val rest: String = cutUntil(Header.isValid).mkString
+          FASTA(
+            // hasNext means, that line is a valid header
+            Header(line.stripPrefix(Header.prefix)),
+            Sequence(rest)
+          )
+        }
     }
 
-    /* This is the same as `parseFasta` dropping all erroneous FASTAs and skipping anything before the first FASTA value */
-    def parseFastaDropErrors(skipCrap: Boolean = true): Iterator[FASTA.Value] = {
-      if (skipCrap) cutUntil(fasta.header.is)
-      parseFasta() collect { case Right(fa) => fa }
+    /* This is the same as `parseFasta`, but skips anything before the first FASTA value */
+    def parseFastaSkipCrap: Iterator[FASTA] = {
+      cutUntil(Header.isValid)
+      parseFasta
     }
   }
 
